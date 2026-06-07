@@ -1,6 +1,7 @@
 # app.py  — JESA DCMA Validator Platform
 # Flask backend: authentication, SQLite persistence, XER analysis API
 
+from __future__ import annotations
 import os, sys, json, hashlib, secrets, sqlite3, csv, io, tempfile
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
