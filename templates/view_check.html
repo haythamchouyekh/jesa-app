@@ -1,0 +1,580 @@
+{% extends "base.html" %}
+{% block title %}Report &middot; {{ chk.project_name }}{% endblock %}
+{% block topbar_title %}Assessment Report{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── HERO ── */
+.report-hero{
+  background:linear-gradient(135deg,var(--blue-deeper) 0%,var(--blue) 60%,var(--blue-light) 100%);
+  border-radius:var(--radius-lg);
+  padding:28px 32px;
+  display:flex;align-items:center;gap:28px;
+  margin-bottom:18px;
+  position:relative;overflow:hidden;
+  box-shadow:var(--shadow-lg);
+  color:var(--white);
+}
+.report-hero::before{content:'';position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
+.report-hero::after{content:'';position:absolute;right:120px;bottom:-70px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
+
+.rh-ring{flex-shrink:0;position:relative;z-index:1}
+.rh-ring svg{transform:rotate(-90deg);filter:drop-shadow(0 4px 12px rgba(0,0,0,.2))}
+.rh-ring-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.rh-score{font-size:22px;font-weight:800;color:var(--white);letter-spacing:-.02em;line-height:1}
+.rh-score-lbl{font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+
+.rh-info{flex:1;position:relative;z-index:1}
+.rh-project{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+.rh-meta{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:rgba(255,255,255,.65);font-family:var(--mono)}
+.rh-meta-item{display:flex;align-items:center;gap:5px}
+.rh-tags{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+.rh-tag{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);padding:4px 12px;border-radius:100px;font-size:11px;font-weight:500;color:var(--white)}
+
+/* ── SCORECARD STRIP ── */
+.scorecard-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+.sc-item{background:var(--white);border:1px solid var(--g100);border-radius:var(--radius);padding:14px 16px;text-align:center;box-shadow:var(--shadow-sm);transition:box-shadow .2s}
+.sc-item:hover{box-shadow:var(--shadow)}
+.sc-num{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.sc-lbl{font-size:10px;font-weight:500;color:var(--g400);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+
+/* ── MAIN LAYOUT ── */
+.report-grid{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+
+/* ── ACCORDION ── */
+.accordion{display:flex;flex-direction:column;gap:6px}
+.acc-item{background:var(--white);border:1px solid var(--g100);border-radius:9px;overflow:hidden;box-shadow:var(--shadow-sm)}
+.acc-header{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;transition:background .15s;user-select:none}
+.acc-header:hover{background:var(--g50)}
+.acc-num{font-family:var(--mono);font-size:10px;color:var(--blue);font-weight:600;min-width:24px;letter-spacing:.04em}
+.acc-name{flex:1;font-size:13px;font-weight:600;color:var(--tx-1)}
+.acc-meta{display:flex;align-items:center;gap:10px}
+.acc-bar-mini{width:50px;height:4px;background:var(--g100);border-radius:2px;overflow:hidden}
+.acc-bar-fill{height:100%;border-radius:2px}
+.acc-pct{font-family:var(--mono);font-size:12px;font-weight:600;min-width:40px;text-align:right}
+.acc-chevron{color:var(--g300);transition:transform .2s;font-size:14px;line-height:1;margin-left:4px}
+.acc-chevron.open{transform:rotate(90deg)}
+.acc-body{display:none;border-top:1px solid var(--g50)}
+.acc-body.show{display:block}
+.acc-info-bar{display:flex;align-items:center;gap:16px;padding:10px 16px;background:var(--g50);border-bottom:1px solid var(--g100);font-size:12px;color:var(--g500);flex-wrap:wrap}
+.viols-table{width:100%;border-collapse:collapse}
+.viols-table th{text-align:left;padding:8px 14px;font-size:10px;font-weight:600;color:var(--g400);letter-spacing:.06em;text-transform:uppercase;background:var(--g50);border-bottom:1px solid var(--g100)}
+.viols-table td{padding:9px 14px;border-bottom:1px solid var(--g50);font-size:12px;vertical-align:top}
+.viols-table tr:last-child td{border-bottom:none}
+.viols-table tbody tr:hover td{background:rgba(27,79,155,.02)}
+.code-pill{font-family:var(--mono);font-size:11px;font-weight:500;background:var(--blue-pale);color:var(--blue);padding:2px 8px;border-radius:4px;white-space:nowrap;display:inline-block}
+.no-viols{padding:18px 16px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--success)}
+
+/* ── RADAR CHART ── */
+.radar-wrap{position:relative;padding:16px 0}
+
+/* ── METRIC SUMMARY GRID ── */
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.metric-card{
+  background:var(--white);border:1px solid var(--g100);border-radius:8px;
+  padding:12px 14px;display:flex;align-items:center;gap:10px;
+  transition:box-shadow .15s;
+}
+.metric-card:hover{box-shadow:var(--shadow-sm)}
+.metric-card.pass-card{border-left:3px solid var(--success)}
+.metric-card.fail-card{border-left:3px solid var(--danger)}
+.mc-left{flex:1;min-width:0}
+.mc-num{font-size:10px;font-family:var(--mono);color:var(--g400);margin-bottom:1px}
+.mc-name{font-size:11px;font-weight:600;color:var(--g800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-bar{height:3px;background:var(--g100);border-radius:2px;margin-top:5px;overflow:hidden}
+.mc-bar-fill{height:100%;border-radius:2px}
+.mc-right{text-align:right;flex-shrink:0}
+.mc-pct{font-size:13px;font-weight:700;font-family:var(--mono)}
+.mc-status{font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-top:1px}
+
+/* ── BONUS ── */
+.bonus-card{background:var(--white);border:1px solid var(--g100);border-radius:9px;padding:14px 18px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-sm)}
+
+</style>
+{% endblock %}
+
+{% block content %}
+{% set score = chk.score %}
+{% set color = '#16a34a' if chk.grade=='GOOD' else ('#d97706' if chk.grade=='FAIR' else '#dc2626') %}
+{% set circ = 251 %}
+{% set offset = circ - (circ * score / 100) %}
+
+<!-- Nav row -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+  <a href="/history" class="btn btn-outline btn-sm">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+    </svg>
+    History
+  </a>
+  <a href="/history" class="btn btn-outline btn-sm" title="Go to History to pick a second assessment to compare">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
+    Compare
+  </a>
+  <div style="display:flex;gap:8px">
+    <a href="/api/check/{{ chk.id }}/export.csv" class="btn btn-outline btn-sm" download>
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Export CSV
+    </a>
+    <a href="/api/check/{{ chk.id }}/export.xlsx" class="btn btn-outline btn-sm" download>
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Export Excel
+    </a>
+    <button onclick="printReport()" class="btn btn-outline btn-sm">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+      Print
+    </button>
+    <a href="/api/check/{{ chk.id }}/download-xer" class="btn btn-outline btn-sm" download title="Download original XER file">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download XER
+    </a>
+    {% if session.role == 'admin' %}
+    <button onclick="deleteCheck({{ chk.id }})" class="btn btn-danger btn-sm">Delete</button>
+    {% endif %}
+    <a href="/new-check" class="btn btn-primary btn-sm">+ New Assessment</a>
+  </div>
+</div>
+
+<!-- Hero -->
+<div class="report-hero anim-fadeup">
+  <div class="rh-ring">
+    <svg width="110" height="110" viewBox="0 0 96 96">
+      <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="7"/>
+      <circle cx="48" cy="48" r="40" fill="none" stroke="{{ color }}" stroke-width="7"
+        stroke-linecap="round" stroke-dasharray="{{ circ }}" stroke-dashoffset="{{ offset }}"
+        transform="rotate(-90 48 48)" style="filter:drop-shadow(0 0 6px {{ color }}80)"/>
+    </svg>
+    <div class="rh-ring-text">
+      <div class="rh-score">{{ score }}%</div>
+      <div class="rh-score-lbl">Score</div>
+    </div>
+  </div>
+  <div class="rh-info">
+    <div class="rh-project">{{ chk.project_name }}</div>
+    <div class="rh-meta">
+      <span class="rh-meta-item">
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        {{ chk.xer_filename }}
+      </span>
+      <span class="rh-meta-item">{{ chk.activities }} activities</span>
+      <span class="rh-meta-item">{{ chk.relationships }} relationships</span>
+      <span class="rh-meta-item">Data: {{ chk.data_date or 'N/A' }}</span>
+      <span class="rh-meta-item">Run: {{ chk.created_at[:16] }}</span>
+      {% if chk.baseline_proj_name %}
+      <span class="rh-meta-item" title="Baseline project">
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        Baseline: {{ chk.baseline_proj_name }}
+      </span>
+      {% endif %}
+    </div>
+    <div class="rh-tags">
+      <span class="badge badge-{{ chk.grade|lower }}" style="font-size:12px;padding:5px 14px">{{ chk.grade }}</span>
+      <span class="rh-tag">{{ chk.passed }}/{{ chk.total_metrics }} metrics passing</span>
+      {% if chk.passed == chk.total_metrics %}
+      <span class="rh-tag" style="background:rgba(22,163,74,.2);border-color:rgba(22,163,74,.3)">Perfect Score</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Scorecard Strip -->
+<div class="scorecard-strip anim-fadeup">
+  <div class="sc-item">
+    <div class="sc-num" style="color:var(--success)">{{ chk.passed }}</div>
+    <div class="sc-lbl">Passing</div>
+  </div>
+  <div class="sc-item">
+    <div class="sc-num" style="color:var(--danger)">{{ chk.total_metrics - chk.passed }}</div>
+    <div class="sc-lbl">Failing</div>
+  </div>
+  <div class="sc-item">
+    <div class="sc-num" style="color:var(--blue)">{{ chk.activities }}</div>
+    <div class="sc-lbl">Activities</div>
+  </div>
+  <div class="sc-item">
+    <div class="sc-num" style="color:var(--blue)">{{ chk.relationships }}</div>
+    <div class="sc-lbl">Relationships</div>
+  </div>
+  <div class="sc-item">
+    <div class="sc-num" style="color:{{ color }}">{{ chk.score }}%</div>
+    <div class="sc-lbl">Score</div>
+  </div>
+</div>
+
+<!-- Main Grid: Accordion + Radar -->
+<div class="report-grid">
+
+  <!-- Left: Metric cards + Accordion -->
+  <div>
+    <!-- Metric summary grid -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:700;color:var(--g800)">14-Point Results</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="expandAll()" class="btn btn-outline btn-sm">Expand All</button>
+        <button onclick="collapseAll()" class="btn btn-outline btn-sm">Collapse All</button>
+      </div>
+    </div>
+
+    <!-- Mini metric cards grid -->
+    <div class="metric-grid" style="margin-bottom:16px">
+      {% for m in metrics %}
+      {% set pass = m.status == 'PASS' %}
+      {% set mcolor = 'var(--success)' if pass else 'var(--danger)' %}
+      {% set bar_w = [m.percentage, 100]|min %}
+      <div class="metric-card {{ 'pass-card' if pass else 'fail-card' }}" onclick="scrollToMetric({{ m.id }})" style="cursor:pointer">
+        <div class="mc-left">
+          <div class="mc-num">#{{ m.metric_no }}</div>
+          <div class="mc-name">{{ m.metric_name.split(' - ', 1)[-1] }}</div>
+          <div class="mc-bar">
+            <div class="mc-bar-fill" style="width:{{ bar_w }}%;background:{{ mcolor }}"></div>
+          </div>
+        </div>
+        <div class="mc-right">
+          <div class="mc-pct" style="color:{{ mcolor }}">{{ m.percentage }}%</div>
+          <div class="mc-status" style="color:{{ mcolor }}">{{ m.status }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Full accordion -->
+    <div class="accordion" id="accordion">
+    {% for m in metrics %}
+    {% set pass = m.status == 'PASS' %}
+    {% set mcolor = 'var(--success)' if pass else 'var(--danger)' %}
+    <div class="acc-item" id="acc-{{ m.id }}">
+      <div class="acc-header" onclick="toggleAcc({{ m.id }})">
+        <div class="acc-num">#{{ m.metric_no }}</div>
+        <div class="msi {{ 'msi-pass' if pass else 'msi-fail' }}">{{ 'P' if pass else 'F' }}</div>
+        <div class="acc-name">{{ m.metric_name.split(' - ', 1)[-1] }}</div>
+        <div class="acc-meta">
+          <span style="font-size:11px;color:var(--g400);font-family:var(--mono)">{{ m.violations }}/{{ m.total }}</span>
+          <div class="acc-bar-mini">
+            <div class="acc-bar-fill {{ 'pbar-green' if pass else 'pbar-red' }}" style="width:{{ [m.percentage,100]|min }}%"></div>
+          </div>
+          <div class="acc-pct" style="color:{{ mcolor }}">{{ m.percentage }}%</div>
+          <span class="badge {{ 'badge-pass' if pass else 'badge-fail' }}" style="font-size:10px">{{ m.status }}</span>
+          <span class="acc-chevron" id="chev-{{ m.id }}">&#8250;</span>
+        </div>
+      </div>
+      <div class="acc-body" id="body-{{ m.id }}">
+        <div class="acc-info-bar">
+          <span>Total checked: <strong>{{ m.total }}</strong></span>
+          <span>Violations: <strong style="color:{{ mcolor }}">{{ m.violations }}</strong></span>
+          <span>Rate: <strong style="color:{{ mcolor }}">
+            {% if m.metric_no == 13 %}{{ m.percentage }}% of activities on CP
+            {% elif m.metric_no == 14 %}{{ m.percentage }}% execution rate (BEI={{ (m.percentage / 100)|round(3) }})
+            {% elif m.metric_no == 12 %}Pass/Fail check
+            {% else %}{{ m.percentage }}%
+            {% endif %}
+          </strong></span>
+        </div>
+        {% if m.violations == 0 %}
+        <div class="no-viols">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          No violations — passes DCMA threshold
+        </div>
+        {% else %}
+        <table class="viols-table">
+          <thead><tr><th>Activity / Relationship</th><th>Issue</th></tr></thead>
+          <tbody id="vtbody-{{ m.id }}"></tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    </div>
+
+    <!-- Bonus -->
+    <div style="margin-top:14px;margin-bottom:8px;font-size:12px;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.06em">Bonus Check</div>
+    <div class="acc-item" id="bonus-card" style="border:1px solid var(--g100);border-radius:10px;overflow:hidden">
+      <div class="acc-header" onclick="toggleBonus()" style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:var(--white)">
+        <span class="badge badge-bonus" style="font-size:10px;flex-shrink:0">Bonus #15</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--g900)">Redundant Relationships</div>
+          <div id="bonus-detail" style="font-size:12px;color:var(--g400);margin-top:2px;font-family:var(--mono)">Loading...</div>
+        </div>
+        <div id="bonus-status" class="msi"></div>
+        <svg id="bonus-chev" class="acc-chevron" width="16" height="16" fill="none" stroke="var(--g400)" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div id="bonus-body" class="acc-body">
+        <div id="bonus-violations-wrap" style="padding:0 16px 14px">
+          <div id="bonus-empty" style="display:none;padding:10px 0;font-size:12px;color:var(--success);align-items:center;gap:6px">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            No redundant relationships found
+          </div>
+          <table class="viols-table" id="bonus-viols-table" style="display:none">
+            <thead><tr><th>Relationship</th><th>Issue</th></tr></thead>
+            <tbody id="bonus-vtbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Download clean XER -->
+    <div id="clean-xer-section" style="display:none;margin-top:10px">
+      <div style="background:linear-gradient(135deg,var(--blue-deeper),var(--blue));border-radius:10px;padding:16px 18px;display:flex;align-items:center;gap:14px">
+        <div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--white)">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:2px">Download Cleaned XER</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.65)" id="clean-xer-desc">XER file with all redundant relationships removed</div>
+        </div>
+        <a href="/api/check/{{ chk.id }}/download-clean-xer"
+           id="clean-xer-btn"
+           class="btn btn-sm"
+           style="background:var(--white);color:var(--blue);font-weight:700;white-space:nowrap"
+           onclick="showToast('Downloading cleaned XER...','info',3000)">
+          Download XER
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Radar Chart + Summary -->
+  <div style="position:sticky;top:72px;display:flex;flex-direction:column;gap:14px">
+
+    <!-- Radar Chart Card -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <svg width="14" height="14" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg>
+          Metric Health Radar
+        </div>
+      </div>
+      <div class="card-body" style="padding:16px">
+        <div style="position:relative;height:260px">
+          <canvas id="radarChart"></canvas>
+        </div>
+        <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--g400)">
+          Higher = better compliance &nbsp;&middot;&nbsp; Target: 100%
+        </div>
+      </div>
+    </div>
+
+    <!-- Pass/Fail summary -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <svg width="14" height="14" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          Quick Summary
+        </div>
+      </div>
+      <div class="card-body" style="padding:16px">
+        {% for m in metrics %}
+        {% set pass = m.status == 'PASS' %}
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--g50)">
+          <div style="width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;background:{{ 'var(--success-bg)' if pass else 'var(--danger-bg)' }};color:{{ 'var(--success)' if pass else 'var(--danger)' }}">
+            {{ 'P' if pass else 'F' }}
+          </div>
+          <span style="font-size:11px;flex:1;color:var(--g700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#{{ m.metric_no }} {{ m.metric_name.split(' - ', 1)[-1] }}</span>
+          <span style="font-size:10px;font-family:var(--mono);color:{{ 'var(--success)' if pass else 'var(--danger)' }}">{{ m.percentage }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Data for JS -->
+<script>
+const metricData = {};
+{% for m in metrics %}
+try { metricData[{{ m.id }}] = {{ m.details_json | safe }}; } catch(e) { metricData[{{ m.id }}] = []; }
+{% endfor %}
+
+// Radar chart data — compliance score per metric (higher = better)
+// M1-M11: 100 - violation% (inverse violation rate)
+// M12 (CP Test): 100 if PASS else 0 (binary)
+// M13 (CPLI): 100 if PASS else 0 (no stored index value at template level)
+// M14 (BEI): use percentage directly (execution rate; ≥95% = PASS)
+const radarLabels = [{% for m in metrics %}'#{{ m.metric_no }}',{% endfor %}];
+const radarScores = [{% for m in metrics %}{% if m.status == 'PASS' %}100{% elif m.metric_no in [12, 13] %}0{% elif m.metric_no == 14 %}{{ m.percentage | round(1) }}{% else %}{{ [100 - m.percentage, 0]|max | round(1) }}{% endif %},{% endfor %}];
+
+new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: {
+    labels: radarLabels,
+    datasets: [{
+      label: 'Compliance Score',
+      data: radarScores,
+      backgroundColor: 'rgba(27,79,155,.1)',
+      borderColor: 'rgba(27,79,155,.85)',
+      borderWidth: 2,
+      pointBackgroundColor: radarScores.map(s => s === 100 ? '#16a34a' : s >= 75 ? '#d97706' : '#dc2626'),
+      pointBorderColor: 'white',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` Compliance: ${ctx.raw}%`,
+        }
+      }
+    },
+    scales: {
+      r: {
+        min: 0, max: 100,
+        ticks: { stepSize: 25, font: { size: 9 }, color: '#94a3b8', backdropColor: 'transparent' },
+        grid: { color: 'rgba(0,0,0,.06)' },
+        angleLines: { color: 'rgba(0,0,0,.06)' },
+        pointLabels: { font: { size: 10, weight: '600' }, color: '#475569' }
+      }
+    },
+    animation: { duration: 1000 }
+  }
+});
+
+// Accordion
+const bodyOpen = new Set();
+
+function toggleAcc(id) {
+  const body = document.getElementById('body-' + id);
+  const chev = document.getElementById('chev-' + id);
+  const open = body.classList.toggle('show');
+  chev.classList.toggle('open', open);
+  if (open) { populateViolations(id); bodyOpen.add(id); }
+  else bodyOpen.delete(id);
+}
+
+function scrollToMetric(id) {
+  const el = document.getElementById('acc-' + id);
+  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); toggleAcc(id); }
+}
+
+function populateViolations(id) {
+  const tbody = document.getElementById('vtbody-' + id);
+  if (!tbody || tbody.innerHTML !== '') return;
+  const data = metricData[id] || [];
+  tbody.innerHTML = data.slice(0, 50).map(v => {
+    let activityCell;
+    if (v.task_code) {
+      const name = v.task_name || '';
+      const showPill = name && name !== v.task_code;
+      activityCell = `<div style="font-weight:600;color:var(--g800);font-size:12px">${name || v.task_code}</div>`
+                   + (showPill ? `<span class="code-pill" style="margin-top:3px;display:inline-block">${v.task_code}</span>` : '');
+    } else if (v.pred_code) {
+      const pName = (v.pred_name && v.pred_name !== v.pred_code) ? v.pred_name : v.pred_code;
+      const sName = (v.succ_name && v.succ_name !== v.succ_code) ? v.succ_name : (v.succ_code || '?');
+      const codesLine = `${v.pred_code} &rarr; ${v.succ_code || '?'}`;
+      const namesLine = `${pName} &rarr; ${sName}`;
+      const showPill  = namesLine !== codesLine;
+      activityCell = `<div style="font-weight:600;color:var(--g800);font-size:12px">${namesLine}</div>`
+                   + (showPill ? `<span class="code-pill" style="margin-top:3px;display:inline-block">${codesLine}</span>` : '');
+    } else {
+      activityCell = '<span class="code-pill">—</span>';
+    }
+    return `<tr><td>${activityCell}</td><td style="color:var(--g600)">${v.issue || ''}</td></tr>`;
+  }).join('') + (data.length > 50
+    ? `<tr><td colspan="2" style="font-family:var(--mono);font-size:11px;color:var(--g400);padding:10px 14px">+${data.length - 50} more violations</td></tr>` : '');
+}
+
+function expandAll() {
+  document.querySelectorAll('.acc-body').forEach(b => b.classList.add('show'));
+  document.querySelectorAll('.acc-chevron').forEach(c => c.classList.add('open'));
+  document.querySelectorAll('.acc-item').forEach(item => {
+    const id = parseInt(item.id.replace('acc-', ''));
+    populateViolations(id);
+  });
+}
+function collapseAll() {
+  document.querySelectorAll('.acc-body').forEach(b => b.classList.remove('show'));
+  document.querySelectorAll('.acc-chevron').forEach(c => c.classList.remove('open'));
+}
+
+// Auto-expand failing metrics
+{% for m in metrics %}{% if m.status == 'FAIL' %}toggleAcc({{ m.id }});{% endif %}{% endfor %}
+
+// Bonus
+let bonusData = [];
+function toggleBonus() {
+  const body = document.getElementById('bonus-body');
+  const chev = document.getElementById('bonus-chev');
+  const open = body.classList.toggle('show');
+  chev.classList.toggle('open', open);
+  if (open) populateBonusViolations();
+}
+function populateBonusViolations() {
+  const tbody = document.getElementById('bonus-vtbody');
+  if (!tbody || tbody.innerHTML !== '') return;
+  if (bonusData.length === 0) {
+    const el = document.getElementById('bonus-empty');
+    el.style.display = 'flex';
+    return;
+  }
+  document.getElementById('bonus-viols-table').style.display = '';
+  tbody.innerHTML = bonusData.slice(0, 50).map(v => {
+    const pName = (v.pred_name && v.pred_name !== v.pred_code) ? v.pred_name : v.pred_code;
+    const sName = (v.succ_name && v.succ_name !== v.succ_code) ? v.succ_name : (v.succ_code || '?');
+    const codesLine = `${v.pred_code} &rarr; ${v.succ_code || '?'}`;
+    const namesLine = `${pName} &rarr; ${sName}`;
+    const showPill  = namesLine !== codesLine;
+    const cell = `<div style="font-weight:600;color:var(--g800);font-size:12px">${namesLine}</div>`
+               + (showPill ? `<span class="code-pill" style="margin-top:3px;display:inline-block">${codesLine}</span>` : '');
+    return `<tr><td>${cell}</td><td style="color:var(--g600)">${v.issue || ''}</td></tr>`;
+  }).join('') + (bonusData.length > 50
+    ? `<tr><td colspan="2" style="font-family:var(--mono);font-size:11px;color:var(--g400);padding:10px 14px">+${bonusData.length - 50} more violations</td></tr>` : '');
+}
+
+try {
+  const full = {{ chk.results_json | safe if chk.results_json else 'null' }};
+  if (full && full.bonus) {
+    const b = full.bonus;
+    const pass = b.status === 'PASS';
+    bonusData = b.details || [];
+    document.getElementById('bonus-detail').textContent =
+      b.violations + ' redundant relationship(s) of ' + b.total + ' checked';
+    const bs = document.getElementById('bonus-status');
+    bs.className = 'msi ' + (pass ? 'msi-pass' : 'msi-fail');
+    bs.textContent = pass ? 'P' : 'F';
+
+    if (b.violations > 0) {
+      document.getElementById('clean-xer-section').style.display = 'block';
+      document.getElementById('clean-xer-desc').textContent =
+        b.violations + ' redundant relationship(s) will be removed from the XER file';
+      toggleBonus(); // auto-expand when violations exist
+    }
+  }
+} catch(e) { document.getElementById('bonus-detail').textContent = 'No data'; }
+
+// Delete
+function deleteCheck(id) {
+  showConfirm('Delete Assessment', 'Permanently delete this assessment report? This cannot be undone.', 'Delete', () => {
+    fetch('/api/check/' + id, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
+      })
+      .then(r => r.json())
+      .then(() => { window.location.href = '/history'; });
+  });
+}
+
+// Print
+function printReport() {
+  window.print();
+}
+</script>
+{% endblock %}

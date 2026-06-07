@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}Projects — Admin{% endblock %}
+{% block topbar_title %}Project Management{% endblock %}
+
+{% block extra_head %}
+<style>
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:24px}
+.proj-card{
+  background:var(--white);border:1.5px solid var(--g100);border-radius:12px;
+  padding:18px 20px;transition:border-color .2s,box-shadow .2s,transform .15s;
+  display:flex;flex-direction:column;gap:10px;
+  text-decoration:none;color:inherit;
+}
+.proj-card:hover{border-color:var(--blue-mid);box-shadow:var(--shadow);transform:translateY(-2px)}
+.proj-card-top{display:flex;align-items:flex-start;gap:12px}
+.proj-avatar{
+  width:42px;height:42px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--blue),var(--blue-light));
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:var(--white);letter-spacing:.04em;
+  box-shadow:0 2px 8px rgba(27,79,155,.25);
+}
+.proj-name{font-size:14px;font-weight:700;color:var(--g900);margin-bottom:3px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.proj-code{font-size:10px;font-family:var(--mono);color:var(--blue);background:var(--blue-pale);padding:2px 7px;border-radius:4px;display:inline-block}
+.proj-desc{font-size:12px;color:var(--g400);line-height:1.5;flex:1}
+.proj-meta{display:flex;gap:12px;padding-top:8px;border-top:1px solid var(--g50)}
+.proj-meta-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--g400);font-family:var(--mono)}
+.proj-actions{display:flex;gap:6px;margin-top:4px}
+
+/* Create form */
+.create-form-wrap{
+  background:var(--white);border:1.5px solid var(--g100);border-radius:12px;
+  padding:24px 28px;margin-bottom:24px;
+}
+.form-row{display:grid;grid-template-columns:1fr 160px;gap:14px;margin-bottom:14px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px}
+.field-group{display:flex;flex-direction:column;gap:5px}
+.field-group label{font-size:11px;font-weight:600;color:var(--g500);letter-spacing:.04em;text-transform:uppercase}
+.field-group input,.field-group textarea{
+  border:1.5px solid var(--g100);border-radius:7px;
+  padding:9px 12px;font-family:var(--sans);font-size:13px;color:var(--g900);
+  background:var(--g50);outline:none;transition:border-color .2s,background .2s;
+}
+.field-group input:focus,.field-group textarea:focus{border-color:var(--blue);background:var(--white)}
+.field-group textarea{resize:vertical;min-height:68px}
+
+.empty-state{text-align:center;padding:64px 24px}
+.empty-icon{width:56px;height:56px;border-radius:14px;background:var(--blue-pale);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--blue)}
+
+.proj-ftab{padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid var(--g100);background:var(--white);color:var(--g500);cursor:pointer;transition:.15s}
+.proj-ftab:hover{border-color:var(--blue-mid);color:var(--blue)}
+.proj-ftab.active{background:var(--blue);border-color:var(--blue);color:var(--white)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page header -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+  <div>
+    <div class="page-title">Projects</div>
+    <div class="page-sub">Create and manage projects, assign team members</div>
+  </div>
+  <button onclick="document.getElementById('create-panel').classList.toggle('hidden')" class="btn btn-primary">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Project
+  </button>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ category }}" style="margin-bottom:16px;padding:11px 14px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:8px;border:1px solid;{% if category=='success' %}background:#f0fdf4;border-color:#bbf7d0;color:#16a34a{% else %}background:#fef2f2;border-color:#fecaca;color:#dc2626{% endif %}">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endwith %}
+
+<!-- Create form (hidden by default) -->
+<div id="create-panel" class="create-form-wrap hidden">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+    <div style="width:32px;height:32px;border-radius:8px;background:var(--blue-pale);display:flex;align-items:center;justify-content:center;color:var(--blue)">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+    </div>
+    <div style="font-size:14px;font-weight:700;color:var(--g800)">New Project</div>
+  </div>
+
+  <form method="POST" action="/admin/projects">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <div class="field-group">
+        <label>Project Name *</label>
+        <input type="text" name="name" placeholder="e.g. Jorf Lasfar Power Plant" required>
+      </div>
+      <div class="field-group">
+        <label>Code *</label>
+        <input type="text" name="code" placeholder="e.g. JLFPP-01" maxlength="20" required>
+      </div>
+    </div>
+    <div class="field-group" style="margin-bottom:16px">
+      <label>Description</label>
+      <textarea name="description" placeholder="Optional short description of the project…"></textarea>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button type="submit" class="btn btn-primary">Create Project</button>
+      <button type="button" onclick="document.getElementById('create-panel').classList.add('hidden')" class="btn btn-outline">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<!-- Projects table -->
+{% if projects %}
+<div class="card anim-fadeup">
+  <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="card-title">
+        <svg width="14" height="14" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+        All Projects
+      </div>
+      <span id="proj-count" style="font-size:12px;color:var(--g400);font-family:var(--mono)">{{ projects|length }} project{{ 's' if projects|length != 1 else '' }}</span>
+    </div>
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="proj-ftab active" data-filter="all"        onclick="setProjFilter('all',this)">All</button>
+      <button class="proj-ftab"        data-filter="has-members" onclick="setProjFilter('has-members',this)">Has Members</button>
+      <button class="proj-ftab"        data-filter="no-members"  onclick="setProjFilter('no-members',this)">No Members</button>
+      <button class="proj-ftab"        data-filter="has-runs"    onclick="setProjFilter('has-runs',this)">Has Runs</button>
+      <button class="proj-ftab"        data-filter="no-runs"     onclick="setProjFilter('no-runs',this)">No Runs</button>
+    </div>
+    <!-- Search + Creator filter row -->
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;align-items:center;gap:7px;background:var(--g50);border:1.5px solid var(--g100);border-radius:7px;padding:7px 12px;transition:border-color .2s;flex:1" id="proj-search-wrap">
+        <svg width="13" height="13" fill="none" stroke="var(--g400)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="proj-search" type="text" placeholder="Search by name or code…"
+          style="border:none;outline:none;background:transparent;font-family:var(--sans);font-size:12px;color:var(--g900);flex:1;min-width:0"
+          oninput="renderProjects()" autocomplete="off">
+        <button id="proj-search-clear" onclick="clearProjSearch()" style="display:none;background:none;border:none;cursor:pointer;color:var(--g300);font-size:16px;line-height:1;padding:0" title="Clear">&times;</button>
+        <span style="font-size:10px;color:var(--g300);font-family:var(--mono);white-space:nowrap">/&nbsp;or&nbsp;Ctrl+F</span>
+      </div>
+      <!-- Creator filter -->
+      <select id="creator-filter" onchange="renderProjects()"
+        style="border:1.5px solid var(--g100);border-radius:7px;padding:7px 10px;font-family:var(--sans);font-size:12px;color:var(--g700);background:var(--g50);outline:none;cursor:pointer;transition:border-color .2s"
+        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--g100)'">
+        <option value="">All Creators</option>
+        {% set seen_creators = [] %}
+        {% for p in projects %}{% if p.creator and p.creator not in seen_creators %}{% set _ = seen_creators.append(p.creator) %}
+        <option value="{{ p.creator|lower }}">{{ p.creator }}</option>
+        {% endif %}{% endfor %}
+      </select>
+    </div>
+  </div>
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Project</th>
+        <th>Created By</th>
+        <th>Created At</th>
+        <th>Total Runs</th>
+        <th>Members</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in projects %}
+      <tr class="proj-row"
+          data-search="{{ (p.name ~ ' ' ~ (p.code or ''))|lower }}"
+          data-creator="{{ (p.creator or '')|lower }}"
+          data-members="{{ p.member_count or 0 }}"
+          data-runs="{{ p.run_count or 0 }}">
+        <td style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--blue)">{{ p.code or '—' }}</td>
+        <td style="max-width:260px">
+          <div style="font-weight:600;font-size:13px;color:var(--g900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.name }}</div>
+          {% if p.description %}<div style="font-size:11px;color:var(--g400);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.description[:60] }}{% if p.description|length > 60 %}…{% endif %}</div>{% endif %}
+        </td>
+        <td>
+          {% if p.created_by and p.created_by in admin_num %}
+          <span style="font-weight:700;color:var(--blue)">Admin {{ admin_num[p.created_by] }}</span>
+          {% elif p.creator %}
+          <div style="font-size:13px;color:var(--g700)">{{ p.creator }}</div>
+          {% else %}
+          <span style="color:var(--g300);font-size:12px">—</span>
+          {% endif %}
+        </td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--g400)">{{ p.created_at[:16] if p.created_at else '—' }}</td>
+        <td>
+          <span style="font-weight:700;font-size:14px;color:var(--g900)">{{ p.run_count or 0 }}</span>
+          <span style="font-size:10px;color:var(--g400);margin-left:2px">run{{ 's' if (p.run_count or 0) != 1 else '' }}</span>
+        </td>
+        <td>
+          <span style="font-weight:700;font-size:14px;color:var(--g900)">{{ p.member_count or 0 }}</span>
+          <span style="font-size:10px;color:var(--g400);margin-left:2px">member{{ 's' if (p.member_count or 0) != 1 else '' }}</span>
+        </td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <a href="/admin/projects/{{ p.id }}" class="btn btn-outline btn-sm">Detail &rarr;</a>
+            <form method="POST" action="/admin/projects/{{ p.id }}/delete" style="margin:0" onsubmit="return false" id="del-proj-{{ p.id }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="button" class="btn btn-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca"
+                onclick="confirmForm('Delete Project','Delete &quot;{{ p.name }}&quot;? All its assessments will be permanently deleted.',document.getElementById('del-proj-{{ p.id }}'))">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <!-- Pagination -->
+  <div id="proj-pagination" style="display:none;align-items:center;justify-content:center;gap:12px;padding:12px 16px;border-top:1px solid var(--g50)">
+    <button id="proj-prev" onclick="projChangePage(-1)" class="btn btn-outline btn-sm" disabled>&larr; Prev</button>
+    <span id="proj-page-info" style="font-size:12px;color:var(--g400);font-family:var(--mono)"></span>
+    <button id="proj-next" onclick="projChangePage(1)" class="btn btn-outline btn-sm">Next &rarr;</button>
+  </div>
+</div>
+{% else %}
+<div class="empty-state anim-fadein">
+  <div class="empty-icon">
+    <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+  </div>
+  <div style="font-size:17px;font-weight:700;color:var(--g700);margin-bottom:8px">No projects yet</div>
+  <div style="font-size:13px;color:var(--g400);margin-bottom:22px">Create your first project to start organising assessments</div>
+  <button onclick="document.getElementById('create-panel').classList.remove('hidden');document.querySelector('#create-panel input[name=name]').focus()" class="btn btn-primary" style="padding:11px 24px">
+    Create First Project
+  </button>
+</div>
+{% endif %}
+
+<script>
+// Auto-open form if there are flash errors
+{% with messages = get_flashed_messages() %}{% if messages %}
+document.getElementById('create-panel').classList.remove('hidden');
+{% endif %}{% endwith %}
+
+const PROJ_PER_PAGE = 10;
+let _projFilter = 'all';
+let _projPage   = 1;
+
+function setProjFilter(f, btn) {
+  _projFilter = f;
+  _projPage   = 1;
+  document.querySelectorAll('.proj-ftab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderProjects();
+}
+
+function filterProjects() { _projPage = 1; renderProjects(); }
+
+function renderProjects() {
+  const q       = (document.getElementById('proj-search').value || '').toLowerCase().trim();
+  const creator = (document.getElementById('creator-filter').value || '').toLowerCase();
+  const rows    = document.querySelectorAll('.proj-row');
+
+  // Collect matching rows
+  const matching = [];
+  rows.forEach(r => {
+    const members = parseInt(r.dataset.members) || 0;
+    const runs    = parseInt(r.dataset.runs)    || 0;
+    const tabMatch =
+      _projFilter === 'all'         ? true :
+      _projFilter === 'has-members' ? members > 0 :
+      _projFilter === 'no-members'  ? members === 0 :
+      _projFilter === 'has-runs'    ? runs > 0 :
+      _projFilter === 'no-runs'     ? runs === 0 : true;
+    const searchMatch  = !q       || r.dataset.search.includes(q);
+    const creatorMatch = !creator || r.dataset.creator === creator;
+    if (tabMatch && searchMatch && creatorMatch) matching.push(r);
+  });
+
+  // Paginate
+  const totalPages = Math.max(1, Math.ceil(matching.length / PROJ_PER_PAGE));
+  if (_projPage > totalPages) _projPage = totalPages;
+  const start = (_projPage - 1) * PROJ_PER_PAGE;
+  const end   = start + PROJ_PER_PAGE;
+
+  rows.forEach(r => r.style.display = 'none');
+  matching.slice(start, end).forEach(r => r.style.display = '');
+
+  // Count label
+  document.getElementById('proj-count').textContent =
+    matching.length + ' project' + (matching.length !== 1 ? 's' : '');
+
+  // Search clear button + border
+  document.getElementById('proj-search-clear').style.display = q ? 'block' : 'none';
+  document.getElementById('proj-search-wrap').style.borderColor = q ? 'var(--blue)' : 'var(--g100)';
+
+  // No-results row
+  let noRes = document.getElementById('proj-no-results');
+  if (matching.length === 0) {
+    if (!noRes) {
+      noRes = document.createElement('tr');
+      noRes.id = 'proj-no-results';
+      noRes.innerHTML = '<td colspan="7" style="text-align:center;padding:28px;color:var(--g400);font-size:13px">No projects match the current filter</td>';
+      document.querySelector('.tbl tbody').appendChild(noRes);
+    }
+  } else if (noRes) { noRes.remove(); }
+
+  // Pagination controls
+  const pag = document.getElementById('proj-pagination');
+  if (matching.length <= PROJ_PER_PAGE) {
+    pag.style.display = 'none';
+  } else {
+    pag.style.display = 'flex';
+    document.getElementById('proj-prev').disabled = _projPage <= 1;
+    document.getElementById('proj-next').disabled = _projPage >= totalPages;
+    document.getElementById('proj-page-info').textContent =
+      'Page ' + _projPage + ' of ' + totalPages + ' · ' + matching.length + ' projects';
+  }
+}
+
+function projChangePage(dir) { _projPage += dir; renderProjects(); }
+
+function clearProjSearch() {
+  document.getElementById('proj-search').value = '';
+  renderProjects();
+  document.getElementById('proj-search').focus();
+}
+
+// Focus search with Ctrl+F or /
+document.addEventListener('keydown', e => {
+  const inp = document.getElementById('proj-search');
+  if (!inp) return;
+  if ((e.key === '/' || (e.ctrlKey && e.key === 'f')) && document.activeElement !== inp) {
+    e.preventDefault(); inp.focus(); inp.select();
+  }
+  if (e.key === 'Escape' && document.activeElement === inp) clearProjSearch();
+});
+
+renderProjects();
+</script>
+{% endblock %}

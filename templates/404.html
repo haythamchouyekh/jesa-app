@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Page Not Found{% endblock %}
+{% block topbar_title %}Not Found{% endblock %}
+
+{% block content %}
+<div style="text-align:center;padding:90px 24px;max-width:480px;margin:0 auto">
+  <div style="font-size:72px;font-weight:900;color:var(--blue-pale);letter-spacing:-.04em;line-height:1;margin-bottom:4px">404</div>
+  <div style="font-size:19px;font-weight:700;color:var(--tx-1);margin-bottom:10px">Page Not Found</div>
+  <div style="font-size:13px;color:var(--tx-3);margin-bottom:28px;line-height:1.6">
+    The page you're looking for doesn't exist or has been moved.
+  </div>
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+    <a href="/dashboard" class="btn btn-primary" style="padding:10px 22px">Go to Dashboard</a>
+    <a href="javascript:history.back()" class="btn btn-outline" style="padding:10px 22px">Go Back</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+{
+  "extraPaths": ["."],
+  "typeCheckingMode": "off",
+  "reportMissingImports": false,
+  "reportMissingModuleSource": false,
+  "reportGeneralTypeIssues": false
+}

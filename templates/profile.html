@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block topbar_title %}My Profile{% endblock %}
+
+{% block extra_head %}
+<style>
+.profile-avatar{
+  width:72px;height:72px;border-radius:16px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--blue),var(--blue-hov));
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:800;color:#fff;letter-spacing:.02em;
+  box-shadow:0 6px 20px rgba(27,79,155,.3);
+}
+.form-section-title{
+  font-size:10px;font-weight:700;color:var(--tx-3);
+  text-transform:uppercase;letter-spacing:.12em;
+  font-family:var(--mono);margin-bottom:12px;
+  padding-bottom:8px;border-bottom:1px solid var(--g100);
+}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field label{font-size:11px;font-weight:600;color:var(--tx-2);letter-spacing:.03em}
+.form-field input{
+  border:1.5px solid var(--border);border-radius:var(--r);
+  padding:9px 12px;font-family:var(--sans);font-size:13px;color:var(--tx-1);
+  background:var(--page-bg);outline:none;transition:border-color .2s,background .2s;
+}
+.form-field input:focus{
+  border-color:var(--blue);background:#fff;
+  box-shadow:0 0 0 3px rgba(37,99,235,.08);
+}
+.form-field .hint{font-size:11px;color:var(--tx-3);margin-top:3px;line-height:1.5}
+.form-field input[readonly]{background:var(--page-bg);color:var(--tx-3);cursor:not-allowed}
+
+.info-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--g100);font-size:13px;
+}
+.info-row:last-child{border-bottom:none}
+.info-label{font-size:11px;font-weight:500;color:var(--tx-3)}
+.info-val{color:var(--tx-1)}
+
+.stat-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.stat-mini{background:var(--page-bg);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center}
+.stat-mini-val{font-size:20px;font-weight:800;color:var(--tx-1);letter-spacing:-.02em}
+.stat-mini-lbl{font-size:10px;color:var(--tx-3);margin-top:3px;text-transform:uppercase;letter-spacing:.07em;font-family:var(--mono)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="flash flash-{{ category }}" style="margin-bottom:16px">{{ message }}</div>
+  {% endfor %}
+{% endwith %}
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start">
+
+  <!-- LEFT: Edit form -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+
+    <!-- Identity card -->
+    <div class="card">
+      <div class="card-body">
+        <!-- Avatar + identity -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+          <div class="profile-avatar">{{ user.full_name[:2].upper() }}</div>
+          <div>
+            <div style="font-size:19px;font-weight:800;color:var(--tx-1);letter-spacing:-.02em">{{ user.full_name }}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+              <span style="font-size:12px;font-family:var(--mono);color:var(--blue)">@{{ user.username }}</span>
+              <span class="badge badge-{{ user.role }}">{{ user.role }}</span>
+            </div>
+          </div>
+        </div>
+
+        <form method="POST" action="/profile/edit" id="profile-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <!-- Basic info -->
+          <div class="form-section-title">Personal Information</div>
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label>Full Name *</label>
+              <input type="text" name="full_name" value="{{ user.full_name }}" required>
+            </div>
+            <div class="form-field">
+              <label>Username</label>
+              <input type="text" value="{{ user.username }}" readonly title="Username cannot be changed here. Contact admin.">
+              <div class="hint">To change username, contact an administrator.</div>
+            </div>
+          </div>
+
+          <!-- Password change -->
+          <div style="height:18px"></div>
+          <div class="form-section-title">Change Password <span style="font-weight:400;text-transform:none;letter-spacing:0;font-family:var(--sans);color:var(--tx-3);font-size:11px">(leave blank to keep current)</span></div>
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label>Current Password</label>
+              <input type="password" name="current_password" id="cur-pw" placeholder="Enter current password" autocomplete="current-password">
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label>New Password</label>
+              <input type="password" name="new_password" id="new-pw" placeholder="Min. 6 characters" autocomplete="new-password" oninput="checkPw()">
+            </div>
+            <div class="form-field">
+              <label>Confirm New Password</label>
+              <input type="password" name="confirm_password" id="confirm-pw" placeholder="Repeat new password" autocomplete="new-password" oninput="checkPw()">
+              <div class="hint" id="pw-hint" style="display:none"></div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <button type="submit" class="btn btn-primary" style="padding:10px 24px">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Info panel -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+
+    <!-- Activity stats -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <svg width="13" height="13" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          My Activity
+        </div>
+      </div>
+      <div class="card-body" style="padding:16px">
+        <div class="stat-trio">
+          <div class="stat-mini">
+            <div class="stat-mini-val">{{ stats.total or 0 }}</div>
+            <div class="stat-mini-lbl">Runs</div>
+          </div>
+          <div class="stat-mini">
+            <div class="stat-mini-val" style="color:var(--success)">{{ stats.good_count or 0 }}</div>
+            <div class="stat-mini-lbl">Good</div>
+          </div>
+          <div class="stat-mini">
+            <div class="stat-mini-val" style="color:{% if stats.total and stats.good_count %}
+              {% if (stats.good_count / stats.total * 100) >= 76 %}var(--success){% elif (stats.good_count / stats.total * 100) >= 60 %}var(--warning){% else %}var(--danger){% endif %}
+            {% else %}var(--tx-3){% endif %}">
+              {% if stats.total %}{{ ((stats.good_count or 0) / stats.total * 100)|round|int }}%{% else %}—{% endif %}
+            </div>
+            <div class="stat-mini-lbl">Rate</div>
+          </div>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Last run</span>
+          <span class="info-val" style="font-family:var(--mono);font-size:12px">{{ (stats.last_run or 'Never')[:10] }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Last login</span>
+          <span class="info-val" style="font-family:var(--mono);font-size:12px">{{ (user.last_login or 'Never')[:16] }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Member since</span>
+          <span class="info-val" style="font-family:var(--mono);font-size:12px">{{ user.created_at[:10] }}</span>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+</div>
+
+<script>
+function checkPw() {
+  const np = document.getElementById('new-pw').value;
+  const cp = document.getElementById('confirm-pw').value;
+  const hint = document.getElementById('pw-hint');
+  if (!np && !cp) { hint.style.display = 'none'; return; }
+  hint.style.display = 'block';
+  if (np.length > 0 && np.length < 6) {
+    hint.style.color = 'var(--danger)';
+    hint.textContent = 'Password must be at least 6 characters.';
+  } else if (cp && np !== cp) {
+    hint.style.color = 'var(--danger)';
+    hint.textContent = 'Passwords do not match.';
+  } else if (cp && np === cp) {
+    hint.style.color = 'var(--success)';
+    hint.textContent = '✓ Passwords match.';
+  } else {
+    hint.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>JESA · Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1B4F9B;--blue-dark:#143d7a;--white:#fff;--off:#f7f9fc;
+  --g50:#f0f4f8;--g100:#e2e8f0;--g300:#94a3b8;--g500:#64748b;
+  --g700:#334155;--g900:#0f172a;--success:#16a34a;--danger:#dc2626;
+  --sans:'Inter',sans-serif;
+}
+html,body{height:100%;font-family:var(--sans)}
+body{background:var(--off);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:40px 24px}
+.card{background:var(--white);border:1px solid var(--g100);border-radius:12px;padding:44px 48px;width:100%;max-width:520px;box-shadow:0 4px 24px rgba(27,79,155,.06)}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--g500);text-decoration:none;margin-bottom:28px;transition:color .15s}
+.back:hover{color:var(--blue)}
+.logo-row{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.logo-img{height:30px;width:auto;max-width:110px;object-fit:contain}
+.logo-sep{width:1px;height:22px;background:var(--g100)}
+.logo-txt{font-size:11px;font-weight:500;color:var(--g500);letter-spacing:.12em;text-transform:uppercase}
+h1{font-size:22px;font-weight:700;color:var(--g900);letter-spacing:-.02em;margin-bottom:4px}
+.sub{font-size:13px;color:var(--g500);margin-bottom:28px}
+.alert{padding:11px 14px;border-radius:6px;font-size:13px;margin-bottom:18px}
+.alert-error{background:#fef2f2;border:1px solid #fecaca;color:var(--danger)}
+.alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:var(--success)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--g700);margin-bottom:5px}
+.field input,.field select{
+  width:100%;border:1.5px solid var(--g100);border-radius:6px;
+  padding:10px 13px;font-family:var(--sans);font-size:13px;
+  color:var(--g900);background:var(--g50);outline:none;transition:border-color .2s,box-shadow .2s;
+}
+.field input:focus,.field select:focus{border-color:var(--blue);background:var(--white);box-shadow:0 0 0 3px rgba(27,79,155,.09)}
+.field input::placeholder{color:var(--g300)}
+.field select option{background:var(--white)}
+.btn{width:100%;background:var(--blue);color:var(--white);border:none;border-radius:6px;
+  padding:12px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;
+  transition:background .2s;margin-top:6px}
+.btn:hover{background:var(--blue-dark)}
+.footer{text-align:center;margin-top:20px;font-size:13px;color:var(--g500)}
+.footer a{color:var(--blue);text-decoration:none;font-weight:500}
+</style>
+</head>
+<body>
+<div class="card">
+  <a href="/login" class="back">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+    </svg>
+    Back to login
+  </a>
+  <div class="logo-row">
+    <img src="/static/img/jesa_logo_transparent.png" alt="JESA" class="logo-img">
+    <div class="logo-sep"></div>
+    <div class="logo-txt">Schedule Validator</div>
+  </div>
+  <h1>Create account</h1>
+  <div class="sub">Join the JESA Schedule Validator platform</div>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  <form method="POST" action="/register">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="grid2">
+      <div class="field"><label>Username</label><input type="text" name="username" placeholder="j.smith" required></div>
+      <div class="field"><label>Full name</label><input type="text" name="full_name" placeholder="John Smith" required></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Password</label><input type="password" name="password" placeholder="min. 6 chars" required></div>
+      <div class="field"><label>Confirm password</label><input type="password" name="confirm" placeholder="repeat" required></div>
+    </div>
+    <button type="submit" class="btn">Create Account →</button>
+  </form>
+  <div class="footer">Already have an account? <a href="/login">Sign in</a></div>
+</div>
+</body>
+</html>

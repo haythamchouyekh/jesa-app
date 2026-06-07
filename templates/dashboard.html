@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+
+/* ── HERO BANNER ── */
+.dash-hero{
+  background:linear-gradient(135deg,var(--blue-deeper) 0%,var(--blue) 60%,var(--blue-light) 100%);
+  border-radius:var(--radius-lg);
+  padding:28px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:24px;
+  position:relative;overflow:hidden;
+  box-shadow:var(--shadow-lg);
+}
+.dash-hero::before{content:'';position:absolute;right:-80px;top:-80px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
+.dash-hero::after{content:'';position:absolute;right:80px;bottom:-60px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
+.hero-left{position:relative;z-index:1}
+.hero-greeting{font-size:22px;font-weight:700;color:var(--white);letter-spacing:-.02em;margin-bottom:4px}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.6);margin-bottom:20px}
+.hero-tags{display:flex;gap:8px;flex-wrap:wrap}
+.hero-tag{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);padding:4px 12px;border-radius:100px;font-size:11px;color:rgba(255,255,255,.8);font-family:var(--mono);letter-spacing:.04em;display:flex;align-items:center;gap:5px}
+.hero-right{display:flex;gap:20px;position:relative;z-index:1;flex-shrink:0}
+.hero-stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:16px 20px;text-align:center;min-width:90px;backdrop-filter:blur(4px)}
+.hero-stat-num{font-size:26px;font-weight:800;color:var(--white);letter-spacing:-.03em;line-height:1}
+.hero-stat-lbl{font-size:10px;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi{
+  background:var(--white);border:1px solid var(--g100);border-radius:var(--radius);
+  padding:18px 20px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden;
+  transition:box-shadow .2s,transform .2s;
+}
+.kpi:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.kpi-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:0}
+.kpi-blue .kpi-accent{background:linear-gradient(90deg,var(--blue),var(--blue-light))}
+.kpi-green .kpi-accent{background:linear-gradient(90deg,var(--success),#4ade80)}
+.kpi-amber .kpi-accent{background:linear-gradient(90deg,var(--warning),#fbbf24)}
+.kpi-red .kpi-accent{background:linear-gradient(90deg,var(--danger),#f87171)}
+.kpi-icon{
+  width:34px;height:34px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;margin-bottom:12px;
+}
+.kpi-blue .kpi-icon{background:var(--blue-pale);color:var(--blue)}
+.kpi-green .kpi-icon{background:var(--success-bg);color:var(--success)}
+.kpi-amber .kpi-icon{background:var(--warning-bg);color:var(--warning)}
+.kpi-red .kpi-icon{background:var(--danger-bg);color:var(--danger)}
+.kpi-num{font-size:28px;font-weight:800;letter-spacing:-.03em;color:var(--g900);line-height:1}
+.kpi-lbl{font-size:11px;font-weight:500;color:var(--g400);margin-top:6px;text-transform:uppercase;letter-spacing:.05em}
+.kpi-trend{font-size:11px;color:var(--g300);margin-top:3px;font-family:var(--mono)}
+
+/* ── MAIN GRID ── */
+.main-grid{display:grid;grid-template-columns:1fr;gap:16px}
+
+/* ── TABLE ENHANCEMENTS ── */
+.project-cell{display:flex;align-items:center;gap:10px}
+.project-icon{
+  width:34px;height:34px;border-radius:8px;
+  background:linear-gradient(135deg,var(--blue-pale),var(--blue-mid));
+  color:var(--blue);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;letter-spacing:.04em;flex-shrink:0;
+  border:1px solid var(--blue-mid);
+}
+.project-name{font-weight:600;color:var(--g900);font-size:13px}
+.project-file{font-size:11px;color:var(--g300);font-family:var(--mono);margin-top:1px}
+.score-cell{display:flex;align-items:center;gap:8px}
+.score-val{font-weight:700;font-size:14px;min-width:38px}
+.score-track{flex:1;max-width:70px;height:5px;background:var(--g100);border-radius:3px;overflow:hidden}
+.score-track-fill{height:100%;border-radius:3px}
+
+/* ── METRIC BARS (right panel) ── */
+.metric-bar-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--g50)}
+.metric-bar-row:last-child{border-bottom:none}
+.metric-bar-label{font-size:11px;color:var(--tx-2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.metric-bar-track{width:60px;height:5px;background:var(--g100);border-radius:3px;overflow:hidden;flex-shrink:0}
+.metric-bar-fill{height:100%;border-radius:3px;background:var(--success)}
+.metric-bar-fill.failing{background:var(--danger)}
+.metric-bar-pct{font-size:10px;font-family:var(--mono);color:var(--g400);min-width:30px;text-align:right}
+
+/* ── DCMA REF ── */
+.thresh-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 16px;border-bottom:1px solid var(--g50);font-size:12px;
+  transition:background .1s;
+}
+.thresh-row:last-child{border-bottom:none}
+.thresh-row:hover{background:var(--g50)}
+.thresh-val{font-family:var(--mono);font-size:10px;color:var(--blue);background:var(--blue-pale);
+  padding:2px 8px;border-radius:4px;font-weight:500}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:56px 24px;color:var(--g300)}
+.empty-icon{width:56px;height:56px;border-radius:12px;background:var(--blue-pale);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--blue)}
+.empty-title{font-size:15px;font-weight:600;color:var(--g500);margin-bottom:6px}
+.empty-sub{font-size:13px;color:var(--g300);margin-bottom:20px}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Banner -->
+<div class="dash-hero anim-fadeup">
+  <div class="hero-left">
+    <div class="hero-greeting">Welcome back, {% if session.role == 'admin' %}Admin{% else %}{{ session.full_name.split()[-1] }}{% endif %}</div>
+    <div class="hero-sub">Schedule Quality Platform &nbsp;&middot;&nbsp; JESA Engineering</div>
+    <div class="hero-tags">
+      <span class="hero-tag" id="hero-date"></span>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-stat">
+      <div class="hero-stat-num" data-count="{{ stats.total or 0 }}">{{ stats.total or 0 }}</div>
+      <div class="hero-stat-lbl">{% if session.role == 'admin' %}Platform Runs{% else %}Total Runs{% endif %}</div>
+    </div>
+    {% if session.role == 'admin' %}
+    <div class="hero-stat">
+      <div class="hero-stat-num" data-count="{{ my_runs or 0 }}">{{ my_runs or 0 }}</div>
+      <div class="hero-stat-lbl">My Runs</div>
+    </div>
+    {% endif %}
+    <div class="hero-stat">
+      <div class="hero-stat-num" data-count="{{ stats.good_count or 0 }}">{{ stats.good_count or 0 }}</div>
+      <div class="hero-stat-lbl">Good Grade</div>
+    </div>
+  </div>
+</div>
+
+<!-- KPI Row -->
+<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+  <div class="kpi kpi-blue anim-fadeup anim-delay-1">
+    <div class="kpi-accent"></div>
+    <div class="kpi-icon">
+      <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+      </svg>
+    </div>
+    <div class="kpi-num" data-count="{{ stats.total or 0 }}">{{ stats.total or 0 }}</div>
+    <div class="kpi-lbl">Assessments Run</div>
+  </div>
+  <div class="kpi kpi-green anim-fadeup anim-delay-2">
+    <div class="kpi-accent"></div>
+    <div class="kpi-icon">
+      <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <div class="kpi-num" data-count="{{ stats.good_count or 0 }}">{{ stats.good_count or 0 }}</div>
+    <div class="kpi-lbl">Good</div>
+  </div>
+  <div class="kpi kpi-amber anim-fadeup anim-delay-3">
+    <div class="kpi-accent"></div>
+    <div class="kpi-icon">
+      <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <div class="kpi-num" data-count="{{ stats.fair_count or 0 }}">{{ stats.fair_count or 0 }}</div>
+    <div class="kpi-lbl">Fair</div>
+  </div>
+  <div class="kpi kpi-red anim-fadeup anim-delay-4">
+    <div class="kpi-accent"></div>
+    <div class="kpi-icon">
+      <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+      </svg>
+    </div>
+    <div class="kpi-num" data-count="{{ stats.poor_count or 0 }}">{{ stats.poor_count or 0 }}</div>
+    <div class="kpi-lbl">Poor</div>
+  </div>
+</div>
+
+{% if checks %}
+<!-- Main Grid -->
+<div class="main-grid">
+  <!-- Recent checks table -->
+  <div class="card anim-fadeup">
+    <div class="card-head">
+      <div class="card-title">
+        <svg width="14" height="14" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        Recent Assessments
+      </div>
+      <a href="/history" class="btn btn-outline btn-sm">View all &rarr;</a>
+    </div>
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Assessment ID</th>
+          <th>Project</th>
+          {% if session.role == 'admin' %}<th>Run By</th>{% endif %}
+          <th>Overall Score</th>
+          <th>Run Date &amp; Time</th>
+          <th>Actual Data Date</th>
+          <th>Baseline Data Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in checks[:5] %}
+        {% set sc = 'pbar-green' if c.grade=='GOOD' else ('pbar-amber' if c.grade=='FAIR' else 'pbar-red') %}
+        {% set tc = 'var(--success)' if c.grade=='GOOD' else ('var(--warning)' if c.grade=='FAIR' else 'var(--danger)') %}
+        <tr>
+          <td style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--blue)">
+            {% if c.project_id and project_run_nos.get(c.id) %}
+            #{{ project_run_nos[c.id] }}
+            {% else %}
+            #{{ c.id }}
+            {% endif %}
+          </td>
+          <td style="max-width:220px">
+            {% if c.admin_project_name %}
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <span style="font-weight:600;font-size:13px;color:var(--g900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">{{ c.admin_project_name }}</span>
+              {% if c.admin_project_code %}
+              <span style="font-size:10px;color:var(--g400);font-family:var(--mono)">[{{ c.admin_project_code }}]</span>
+              {% endif %}
+            </div>
+            {% else %}
+            <span style="color:var(--g300);font-size:12px">—</span>
+            {% endif %}
+          </td>
+          {% if session.role == 'admin' %}
+          <td style="font-size:13px;color:var(--g700)">
+            {% if c.user_role == 'admin' and c.user_id in admin_num %}
+            <span style="font-weight:700;color:var(--blue)">Admin {{ admin_num[c.user_id] }}</span>
+            {% else %}
+            {{ c.full_name or c.username or '—' }}
+            {% endif %}
+          </td>
+          {% endif %}
+          <td>
+            <div class="score-cell" style="flex-wrap:wrap">
+              <span class="score-val" style="color:{{ tc }}">{{ c.score }}%</span>
+              <span class="badge badge-{{ c.grade|lower }}" style="font-size:10px;padding:2px 8px">{{ c.grade }}</span>
+              <div class="score-track" style="flex-basis:100%;max-width:70px">
+                <div class="score-track-fill {{ sc }}" style="width:{{ c.score }}%"></div>
+              </div>
+            </div>
+          </td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--g300)">{{ c.created_at[:16] }}</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--g400)">{{ c.data_date or '—' }}</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--g400)">{{ c.baseline_data_date or '—' }}</td>
+          <td><a href="/check/{{ c.id }}" class="btn btn-outline btn-sm">Report &rarr;</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div style="text-align:center;padding:80px 24px" class="anim-fadein">
+  <div class="empty-icon">
+    <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+    </svg>
+  </div>
+  <div style="font-size:18px;font-weight:700;color:var(--g700);margin-bottom:8px">No assessments yet</div>
+  <div style="font-size:13px;color:var(--g400);margin-bottom:24px;line-height:1.7;max-width:380px;margin-left:auto;margin-right:auto">
+    Upload your first Primavera P6 XER schedule file to run a full<br>14-point DCMA quality assessment
+  </div>
+  <a href="/new-check" class="btn btn-primary" style="padding:12px 28px;font-size:14px">
+    Run First Assessment
+  </a>
+</div>
+{% endif %}
+
+
+<script>
+// Set date in hero
+document.getElementById('hero-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+// Animate KPI numbers
+document.querySelectorAll('[data-count]').forEach(el => {
+  const target = parseInt(el.dataset.count) || 0;
+  animateCount(el, target, 900);
+});
+
+</script>
+{% endblock %}

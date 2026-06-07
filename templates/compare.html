@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+{% block title %}Compare &middot; {{ chk1.project_name }} vs {{ chk2.project_name }}{% endblock %}
+{% block topbar_title %}Schedule Comparison{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── COMPARE HERO ── */
+.cmp-header{
+  background:linear-gradient(135deg,var(--blue-deeper) 0%,var(--blue) 60%,var(--blue-light) 100%);
+  border-radius:var(--radius-lg);
+  padding:24px 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;
+  box-shadow:var(--shadow-lg);
+  color:var(--white);
+  position:relative;overflow:hidden;
+}
+.cmp-header::before{content:'';position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
+.cmp-vs-badge{
+  background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.25);
+  border-radius:50%;width:44px;height:44px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:13px;color:var(--white);
+  flex-shrink:0;
+}
+.cmp-title{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+.cmp-sub{font-size:12px;color:rgba(255,255,255,.6)}
+
+/* ── SCORE CARDS ── */
+.score-cards{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;margin-bottom:18px;align-items:stretch}
+.score-card{
+  background:var(--white);border:1px solid var(--g100);border-radius:var(--radius);
+  padding:20px 22px;box-shadow:var(--shadow-sm);
+  display:flex;align-items:center;gap:18px;
+}
+.score-card.winner{border-color:var(--success);border-width:2px;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
+.sc-ring{flex-shrink:0;position:relative}
+.sc-ring svg{transform:rotate(-90deg)}
+.sc-ring-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.sc-ring-num{font-size:16px;font-weight:800;line-height:1}
+.sc-ring-lbl{font-size:8px;color:var(--g400);text-transform:uppercase;letter-spacing:.08em}
+.sc-details{flex:1;min-width:0}
+.sc-project{font-size:14px;font-weight:700;color:var(--g900);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-file{font-size:11px;color:var(--g400);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+.sc-meta{font-size:11px;color:var(--g500)}
+
+/* ── DELTA CARD ── */
+.delta-card{
+  background:var(--white);border:1px solid var(--g100);border-radius:var(--radius);
+  padding:16px 20px;box-shadow:var(--shadow-sm);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;min-width:110px;
+}
+.delta-num{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.delta-up{color:var(--success)}
+.delta-down{color:var(--danger)}
+.delta-neutral{color:var(--g400)}
+.delta-lbl{font-size:10px;color:var(--g400);text-transform:uppercase;letter-spacing:.08em;text-align:center}
+.delta-arrow{font-size:28px;line-height:1}
+
+/* ── COMPARISON TABLE ── */
+.cmp-table{width:100%;border-collapse:collapse;font-size:13px}
+.cmp-table th{
+  text-align:left;padding:10px 14px;font-size:10px;font-weight:600;
+  color:var(--g400);letter-spacing:.06em;text-transform:uppercase;
+  background:var(--g50);border-bottom:1px solid var(--g100);
+}
+.cmp-table th.center{text-align:center}
+.cmp-table td{padding:11px 14px;border-bottom:1px solid var(--g50);vertical-align:middle}
+.cmp-table tr:last-child td{border-bottom:none}
+.cmp-table tbody tr:hover td{background:rgba(27,79,155,.02)}
+
+.metric-delta{
+  display:flex;align-items:center;justify-content:center;gap:4px;
+  font-size:11px;font-weight:600;font-family:var(--mono);
+  padding:4px 8px;border-radius:6px;white-space:nowrap;
+}
+.delta-improved{background:var(--success-bg);color:var(--success)}
+.delta-declined{background:var(--danger-bg);color:var(--danger)}
+.delta-same{background:var(--g50);color:var(--g400)}
+
+.metric-score-cell{display:flex;align-items:center;gap:6px}
+.metric-pct{font-weight:700;font-size:13px;font-family:var(--mono);min-width:38px}
+.metric-bar-track{flex:1;max-width:55px;height:4px;background:var(--g100);border-radius:2px;overflow:hidden}
+.metric-bar-fill{height:100%;border-radius:2px}
+
+/* ── CHART ── */
+.chart-card{background:var(--white);border:1px solid var(--g100);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow-sm);margin-bottom:16px}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set score1 = chk1.score %}
+{% set score2 = chk2.score %}
+{% set delta  = score2 - score1 %}
+{% set winner = 'b' if score2 > score1 else ('a' if score1 > score2 else 'tie') %}
+{% set color1 = '#16a34a' if score1>=76 else ('#d97706' if score1>=60 else '#dc2626') %}
+{% set color2 = '#16a34a' if score2>=76 else ('#d97706' if score2>=60 else '#dc2626') %}
+
+<!-- Nav -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+  <a href="/history" class="btn btn-outline btn-sm">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+    </svg>
+    Back to History
+  </a>
+  <div style="display:flex;gap:8px">
+    <a href="/new-check" class="btn btn-primary btn-sm">+ New Assessment</a>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="cmp-header anim-fadeup">
+  <div style="position:relative;z-index:1">
+    <div class="cmp-title">Schedule Comparison</div>
+    <div class="cmp-sub">Side-by-side 14-point DCMA metric analysis</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;position:relative;z-index:1">
+    <div style="text-align:right">
+      <div style="font-size:13px;font-weight:600;color:var(--white)">{{ chk1.project_name[:20] }}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.6)">Baseline</div>
+    </div>
+    <div class="cmp-vs-badge">VS</div>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--white)">{{ chk2.project_name[:20] }}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.6)">Comparison</div>
+    </div>
+  </div>
+</div>
+
+<!-- Score Cards -->
+<div class="score-cards anim-fadeup">
+
+  <!-- Check A -->
+  <div class="score-card {{ 'winner' if winner == 'a' else '' }}">
+    <div class="sc-ring">
+      <svg width="80" height="80" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r="40" fill="none" stroke="var(--g100)" stroke-width="7"/>
+        <circle cx="48" cy="48" r="40" fill="none" stroke="{{ color1 }}" stroke-width="7"
+          stroke-linecap="round" stroke-dasharray="251"
+          stroke-dashoffset="{{ 251 - (251 * score1 / 100) }}"
+          transform="rotate(-90 48 48)"/>
+      </svg>
+      <div class="sc-ring-text">
+        <div class="sc-ring-num" style="color:{{ color1 }}">{{ score1 }}%</div>
+        <div class="sc-ring-lbl">score</div>
+      </div>
+    </div>
+    <div class="sc-details">
+      <div class="sc-project">{{ chk1.project_name }}</div>
+      <div class="sc-file">{{ chk1.xer_filename[:28] }}{% if chk1.xer_filename|length > 28 %}&hellip;{% endif %}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span class="badge badge-{{ chk1.grade|lower }}" style="font-size:10px">{{ chk1.grade }}</span>
+        <span style="font-size:11px;color:var(--g400)">{{ chk1.passed }}/{{ chk1.total_metrics }} passing</span>
+      </div>
+      <div class="sc-meta">{{ chk1.created_at[:10] }} &nbsp;&middot;&nbsp; {{ chk1.activities }} activities</div>
+      {% if winner == 'a' %}
+      <div style="margin-top:6px;font-size:11px;font-weight:600;color:var(--success)">Best Score</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Delta -->
+  <div class="delta-card">
+    {% if delta > 0 %}
+    <div class="delta-arrow" style="color:var(--success)">&#8593;</div>
+    <div class="delta-num delta-up">+{{ delta }}</div>
+    <div class="delta-lbl">pts improvement</div>
+    {% elif delta < 0 %}
+    <div class="delta-arrow" style="color:var(--danger)">&#8595;</div>
+    <div class="delta-num delta-down">{{ delta }}</div>
+    <div class="delta-lbl">pts decline</div>
+    {% else %}
+    <div class="delta-arrow delta-neutral">&mdash;</div>
+    <div class="delta-num delta-neutral">0</div>
+    <div class="delta-lbl">no change</div>
+    {% endif %}
+  </div>
+
+  <!-- Check B -->
+  <div class="score-card {{ 'winner' if winner == 'b' else '' }}">
+    <div class="sc-ring">
+      <svg width="80" height="80" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r="40" fill="none" stroke="var(--g100)" stroke-width="7"/>
+        <circle cx="48" cy="48" r="40" fill="none" stroke="{{ color2 }}" stroke-width="7"
+          stroke-linecap="round" stroke-dasharray="251"
+          stroke-dashoffset="{{ 251 - (251 * score2 / 100) }}"
+          transform="rotate(-90 48 48)"/>
+      </svg>
+      <div class="sc-ring-text">
+        <div class="sc-ring-num" style="color:{{ color2 }}">{{ score2 }}%</div>
+        <div class="sc-ring-lbl">score</div>
+      </div>
+    </div>
+    <div class="sc-details">
+      <div class="sc-project">{{ chk2.project_name }}</div>
+      <div class="sc-file">{{ chk2.xer_filename[:28] }}{% if chk2.xer_filename|length > 28 %}&hellip;{% endif %}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span class="badge badge-{{ chk2.grade|lower }}" style="font-size:10px">{{ chk2.grade }}</span>
+        <span style="font-size:11px;color:var(--g400)">{{ chk2.passed }}/{{ chk2.total_metrics }} passing</span>
+      </div>
+      <div class="sc-meta">{{ chk2.created_at[:10] }} &nbsp;&middot;&nbsp; {{ chk2.activities }} activities</div>
+      {% if winner == 'b' %}
+      <div style="margin-top:6px;font-size:11px;font-weight:600;color:var(--success)">Best Score</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Bar Chart Comparison -->
+<div class="chart-card anim-fadeup">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="font-size:14px;font-weight:700;color:var(--g800)">
+      <svg width="15" height="15" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:4px"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
+      14-Metric Comparison
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;font-size:12px">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:rgba(27,79,155,.7);display:inline-block"></span>{{ chk1.project_name[:16] }}{% if chk1.project_name|length > 16 %}&hellip;{% endif %}</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:rgba(22,163,74,.7);display:inline-block"></span>{{ chk2.project_name[:16] }}{% if chk2.project_name|length > 16 %}&hellip;{% endif %}</span>
+    </div>
+  </div>
+  <div style="position:relative;height:280px">
+    <canvas id="compareChart"></canvas>
+  </div>
+</div>
+
+<!-- Metric-by-metric table -->
+<div class="card anim-fadeup">
+  <div class="card-head">
+    <div class="card-title">
+      <svg width="14" height="14" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      Metric-by-Metric Detail
+    </div>
+    <span style="font-size:12px;color:var(--g400);font-family:var(--mono)">
+      {{ metrics1|length }} metrics compared
+    </span>
+  </div>
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Metric</th>
+        <th>{{ chk1.project_name[:18] }}{% if chk1.project_name|length > 18 %}&hellip;{% endif %}</th>
+        <th class="center">Delta</th>
+        <th>{{ chk2.project_name[:18] }}{% if chk2.project_name|length > 18 %}&hellip;{% endif %}</th>
+        <th class="center">Change</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for m1, m2 in zip(metrics1, metrics2) %}
+    {% set p1 = m1.status == 'PASS' %}
+    {% set p2 = m2.status == 'PASS' %}
+    {% set dpct = m2.percentage - m1.percentage %}
+
+    {# For most metrics lower % is better (violation rate). Only M14 (BEI execution %) is directly higher-is-better. #}
+    {% set higher_better = m1.metric_no == 14 %}
+    {% if higher_better %}
+      {% set improved = dpct > 0 %}
+      {% set declined = dpct < 0 %}
+    {% else %}
+      {% set improved = dpct < 0 %}
+      {% set declined = dpct > 0 %}
+    {% endif %}
+
+    <tr>
+      <td><span style="font-family:var(--mono);font-size:10px;color:var(--blue);font-weight:600">#{{ m1.metric_no }}</span></td>
+      <td style="font-weight:500;color:var(--g800);font-size:12px">{{ m1.metric_name.split(' - ', 1)[-1] }}</td>
+      <td>
+        <div class="metric-score-cell">
+          <span class="metric-pct" style="color:{{ 'var(--success)' if p1 else 'var(--danger)' }}">{{ m1.percentage }}%</span>
+          <div class="metric-bar-track">
+            <div class="metric-bar-fill" style="width:{{ [m1.percentage,100]|min }}%;background:{{ 'var(--success)' if p1 else 'var(--danger)' }}"></div>
+          </div>
+          <span class="badge {{ 'badge-pass' if p1 else 'badge-fail' }}" style="font-size:9px;padding:2px 6px">{{ m1.status }}</span>
+        </div>
+      </td>
+      <td class="center">
+        {% if dpct != 0 %}
+        <span style="font-family:var(--mono);font-size:12px;font-weight:600;color:{{ 'var(--success)' if improved else 'var(--danger)' }}">
+          {{ '+' if dpct > 0 else '' }}{{ dpct|round(1) }}%
+        </span>
+        {% else %}
+        <span style="font-size:12px;color:var(--g300)">&mdash;</span>
+        {% endif %}
+      </td>
+      <td>
+        <div class="metric-score-cell">
+          <span class="metric-pct" style="color:{{ 'var(--success)' if p2 else 'var(--danger)' }}">{{ m2.percentage }}%</span>
+          <div class="metric-bar-track">
+            <div class="metric-bar-fill" style="width:{{ [m2.percentage,100]|min }}%;background:{{ 'var(--success)' if p2 else 'var(--danger)' }}"></div>
+          </div>
+          <span class="badge {{ 'badge-pass' if p2 else 'badge-fail' }}" style="font-size:9px;padding:2px 6px">{{ m2.status }}</span>
+        </div>
+      </td>
+      <td class="center">
+        {% if improved %}
+        <span class="metric-delta delta-improved">&#8593; Better</span>
+        {% elif declined %}
+        <span class="metric-delta delta-declined">&#8595; Worse</span>
+        {% else %}
+        <span class="metric-delta delta-same">= Same</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Quick action -->
+<div style="text-align:center;padding:20px 0">
+  <a href="/history" class="btn btn-outline">View All History</a>
+  <a href="/new-check" class="btn btn-primary" style="margin-left:8px">+ New Assessment</a>
+</div>
+
+<script>
+// Grouped bar chart — same compliance logic as radar in view_check.html
+// M1-M11: 100-violation%, M12/M13: 100 if PASS else 0, M14: execution% directly
+const labels = [{% for m in metrics1 %}'#{{ m.metric_no }}',{% endfor %}];
+const scores1 = [{% for m in metrics1 %}{% if m.status == 'PASS' %}100{% elif m.metric_no in [12, 13] %}0{% elif m.metric_no == 14 %}{{ m.percentage | round(1) }}{% else %}{{ [100 - m.percentage, 0]|max | round(1) }}{% endif %},{% endfor %}];
+const scores2 = [{% for m in metrics2 %}{% if m.status == 'PASS' %}100{% elif m.metric_no in [12, 13] %}0{% elif m.metric_no == 14 %}{{ m.percentage | round(1) }}{% else %}{{ [100 - m.percentage, 0]|max | round(1) }}{% endif %},{% endfor %}];
+
+new Chart(document.getElementById('compareChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      {
+        label: '{{ chk1.project_name[:20] }}',
+        data: scores1,
+        backgroundColor: 'rgba(27,79,155,.7)',
+        borderRadius: 4,
+        borderSkipped: false,
+      },
+      {
+        label: '{{ chk2.project_name[:20] }}',
+        data: scores2,
+        backgroundColor: 'rgba(22,163,74,.7)',
+        borderRadius: 4,
+        borderSkipped: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}% compliance`,
+          title: ctx => {
+            const names = [{% for m in metrics1 %}'{{ m.metric_name }}',{% endfor %}];
+            const idx = labels.indexOf(ctx[0].label);
+            return names[idx] || ctx[0].label;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        min: 0, max: 100,
+        grid: { color: 'rgba(0,0,0,.04)' },
+        ticks: { font: { size: 10 }, color: '#94a3b8', callback: v => v + '%' }
+      },
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 10 }, color: '#94a3b8' }
+      }
+    },
+    animation: { duration: 900 }
+  }
+});
+</script>
+{% endblock %}

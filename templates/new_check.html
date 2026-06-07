@@ -1,0 +1,1147 @@
+{% extends "base.html" %}
+{% block title %}New Assessment{% endblock %}
+{% block topbar_title %}New Assessment{% endblock %}
+
+{% block extra_head %}
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin-icon { animation: spin 1s linear infinite; }
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{
+  border:2px dashed var(--g200);border-radius:12px;
+  padding:48px 32px;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s,transform .15s;
+  position:relative;background:var(--g50);
+}
+.upload-zone:hover,.upload-zone.dragover{
+  border-color:var(--blue);background:var(--blue-pale);
+  transform:translateY(-2px);
+}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{
+  width:56px;height:56px;border-radius:14px;
+  background:var(--white);border:1.5px solid var(--g100);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 16px;color:var(--blue);
+  box-shadow:var(--shadow);
+  transition:transform .2s;
+}
+.upload-zone:hover .upload-icon{transform:scale(1.08)}
+.upload-title{font-size:16px;font-weight:700;color:var(--g700);margin-bottom:6px}
+.upload-sub{font-size:13px;color:var(--g400);line-height:1.6}
+.file-tag{
+  display:none;align-items:center;gap:10px;
+  background:var(--blue-pale);border:1px solid var(--blue-mid);
+  border-radius:8px;padding:12px 16px;margin-top:14px;
+  animation:fadeInUp .3s ease;
+}
+.file-tag.show{display:flex}
+.file-tag-icon{width:32px;height:32px;border-radius:7px;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--white)}
+.file-tag-name{font-family:var(--mono);font-size:12px;color:var(--blue-dark);flex:1;font-weight:500}
+.file-tag-size{font-size:11px;color:var(--g400);font-family:var(--mono)}
+.file-tag-clear{background:none;border:none;cursor:pointer;color:var(--g400);font-size:20px;padding:0 4px;line-height:1;transition:color .15s;flex-shrink:0}
+.file-tag-clear:hover{color:var(--danger)}
+
+/* ── PROGRESS ── */
+.progress-section{display:none;margin-top:20px}
+.progress-section.show{display:block;animation:fadeInUp .3s ease}
+.progress-header{display:flex;justify-content:space-between;font-size:12px;color:var(--g500);margin-bottom:8px}
+.progress-track{height:8px;background:var(--g100);border-radius:4px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,.05)}
+.progress-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--blue),var(--blue-light));
+  border-radius:4px;transition:width .5s ease;
+  position:relative;overflow:hidden;
+}
+.progress-fill::after{
+  content:'';position:absolute;top:0;left:-60px;right:0;bottom:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
+  animation:shimmer 1.5s infinite;
+}
+@keyframes shimmer{to{transform:translateX(200%)}}
+
+.progress-steps{display:flex;justify-content:space-between;margin-top:14px}
+.prog-step{text-align:center;flex:1}
+.prog-step-dot{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--g100);border:2.5px solid var(--g100);
+  margin:0 auto 5px;display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;transition:.3s;
+}
+.prog-step.done .prog-step-dot{background:var(--blue);border-color:var(--blue);color:var(--white)}
+.prog-step.active .prog-step-dot{background:var(--white);border-color:var(--blue);color:var(--blue);box-shadow:0 0 0 3px rgba(27,79,155,.15)}
+.prog-step-lbl{font-size:9px;color:var(--g300);letter-spacing:.04em;text-transform:uppercase;font-weight:500}
+.prog-step.done .prog-step-lbl,.prog-step.active .prog-step-lbl{color:var(--blue)}
+
+/* ── RESULTS ── */
+#results{display:none;margin-top:28px}
+#results.show{display:block;animation:fadeInUp .4s ease}
+
+.results-hero{
+  background:linear-gradient(135deg,var(--blue-deeper),var(--blue));
+  border-radius:14px;padding:24px 28px;
+  display:flex;align-items:center;gap:24px;
+  box-shadow:var(--shadow-lg);margin-bottom:14px;
+  color:var(--white);
+}
+.rs-ring{flex-shrink:0;position:relative}
+.rs-ring svg{transform:rotate(-90deg)}
+.rs-ring-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.rs-score{font-size:20px;font-weight:800;color:var(--white);line-height:1}
+.rs-score-lbl{font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.1em}
+.rs-info{flex:1}
+.rs-project{font-size:19px;font-weight:700;margin-bottom:6px;letter-spacing:-.01em}
+.rs-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:rgba(255,255,255,.65);font-family:var(--mono)}
+.rs-actions{margin-top:14px;display:flex;gap:8px}
+
+/* ── METRIC CARDS ── */
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.md-card{
+  background:var(--white);border:1px solid var(--g100);border-radius:9px;
+  padding:12px 14px;display:flex;align-items:flex-start;gap:10px;
+  cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;
+}
+.md-card:hover{border-color:var(--blue-mid);box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+.md-card.pass{border-left:3px solid var(--success)}
+.md-card.fail{border-left:3px solid var(--danger)}
+.md-left{flex:1;min-width:0}
+.md-title{font-size:11px;font-weight:600;color:var(--tx-1);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.md-sub{font-size:10px;color:var(--g400);font-family:var(--mono)}
+.md-bar{height:3px;background:var(--g100);border-radius:2px;margin-top:5px;overflow:hidden}
+.md-bar-fill{height:100%;border-radius:2px;transition:width .8s ease}
+.md-right{text-align:right;flex-shrink:0}
+.md-pct{font-size:14px;font-weight:700;font-family:var(--mono)}
+.md-status{font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-top:1px}
+
+/* ── VIOLATIONS DRAWER ── */
+.viols-drawer{background:var(--g50);border:1px solid var(--g100);border-radius:9px;margin-bottom:8px;overflow:hidden;display:none}
+.viols-drawer.show{display:block;animation:fadeInUp .25s ease}
+.viols-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--white);border-bottom:1px solid var(--g100)}
+.viols-title{font-size:12px;font-weight:600;color:var(--g700)}
+.viols-count{font-size:11px;font-family:var(--mono);color:var(--danger)}
+.viols-body{max-height:240px;overflow-y:auto}
+.viol-row{display:grid;grid-template-columns:1fr 1.4fr;gap:12px;padding:9px 14px;border-bottom:1px solid var(--g100);font-size:12px;align-items:start}
+.viol-row:last-child{border-bottom:none}
+.viol-code{font-family:var(--mono);font-size:11px;font-weight:500;background:var(--white);border:1px solid var(--g100);padding:2px 7px;border-radius:4px;color:var(--blue);white-space:nowrap;display:inline-block;margin-top:3px}
+.viol-issue{color:var(--tx-2);line-height:1.5}
+
+/* ── RIGHT PANEL ── */
+.thresh-row{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;border-bottom:1px solid var(--g50);font-size:12px;transition:background .1s}
+.thresh-row:last-child{border-bottom:none}
+.thresh-row:hover{background:var(--g50)}
+.thresh-val{font-family:var(--mono);font-size:10px;color:var(--blue);background:var(--blue-pale);padding:2px 7px;border-radius:4px;font-weight:500}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+  <div>
+    <div class="page-title">New DCMA Assessment</div>
+    <div class="page-sub">Upload a Primavera P6 .xer file &mdash; full 14-point schedule quality analysis</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start">
+
+  <!-- Upload form -->
+  <div>
+    <!-- Step 1: Project Selection -->
+    <div class="card" style="margin-bottom:12px;border:2px solid var(--blue-mid);overflow:visible">
+      <div class="card-head" style="background:var(--blue-pale);border-radius:var(--rl) var(--rl) 0 0">
+        <div class="card-title" style="color:var(--blue)">
+          <svg width="14" height="14" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+          Step 1 — Select Project <span style="font-weight:700;color:var(--danger);font-size:12px">&nbsp;* required</span>
+        </div>
+      </div>
+      <div class="card-body" style="overflow:visible">
+        {% if projects %}
+        <!-- Searchable project combobox -->
+        <div id="proj-combo" style="position:relative">
+          <!-- Search input -->
+          <div id="proj-combo-input-wrap" style="display:flex;align-items:center;gap:8px;border:1.5px solid var(--blue-mid);border-radius:7px;padding:9px 13px;background:var(--white);cursor:text;transition:border-color .2s"
+            onclick="openProjDropdown()">
+            <svg width="13" height="13" fill="none" stroke="var(--g400)" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="proj-combo-input" type="text" placeholder="Search projects…" autocomplete="off"
+              style="border:none;outline:none;font-family:var(--sans);font-size:13px;color:var(--g900);background:transparent;flex:1;min-width:0"
+              oninput="filterProjCombo()" onfocus="openProjDropdown()" onkeydown="projComboKey(event)">
+            <span id="proj-combo-clear" onclick="clearProjCombo(event)" style="display:none;cursor:pointer;color:var(--g300);font-size:18px;line-height:1;flex-shrink:0" title="Clear">&times;</span>
+            <svg id="proj-combo-arrow" width="12" height="12" fill="none" stroke="var(--g400)" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <!-- Dropdown list -->
+          <div id="proj-combo-list" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--white);border:1.5px solid var(--blue-mid);border-radius:8px;box-shadow:var(--sh-lg);z-index:200;max-height:220px;overflow-y:auto">
+            {% for p in projects %}
+            <div class="proj-combo-option" data-id="{{ p.id }}"
+              data-search="{{ ((p.code or '') ~ ' ' ~ p.name)|lower }}"
+              data-label="{% if p.code %}[{{ p.code }}] {% endif %}{{ p.name }}"
+              onclick="selectProjOption(this)"
+              style="padding:9px 13px;cursor:pointer;font-size:13px;color:var(--g900);display:flex;align-items:center;gap:8px;transition:background .1s;border-bottom:1px solid var(--g50)">
+              {% if p.code %}
+              <span style="font-family:var(--mono);font-size:10px;font-weight:600;color:var(--blue);background:var(--blue-pale);padding:1px 6px;border-radius:4px;flex-shrink:0">{{ p.code }}</span>
+              {% endif %}
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.name }}</span>
+            </div>
+            {% endfor %}
+            <div id="proj-combo-empty" style="display:none;padding:16px;text-align:center;font-size:12px;color:var(--g400)">No projects match your search</div>
+          </div>
+          <!-- Hidden actual select (read by onProjectSelectChange logic) -->
+          <select id="project-select" style="display:none" onchange="onProjectSelectChange()">
+            <option value="">— Select a project —</option>
+            {% for p in projects %}
+            <option value="{{ p.id }}">{% if p.code %}[{{ p.code }}] {% endif %}{{ p.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div id="proj-required-msg" style="display:none;font-size:12px;color:var(--danger);margin-top:6px">Please select a project before uploading a file.</div>
+        {% else %}
+        {% if session.role == 'admin' %}
+        <div style="font-size:13px;color:var(--g400);padding:4px 0">
+          No projects yet. <a href="/admin/projects" style="color:var(--blue);font-weight:600">Create a project →</a>
+        </div>
+        {% else %}
+        <div style="font-size:13px;color:var(--g400);padding:4px 0">No projects available. Ask an administrator to create a project and add you as a member.</div>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Step 2: XER File Upload -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head">
+        <div class="card-title">
+          <svg width="14" height="14" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Step 2 — XER Schedule File
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="upload-zone" id="drop-zone" style="opacity:.45;pointer-events:none">
+          <input type="file" id="xer-input" accept=".xer">
+          <div class="upload-icon">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="upload-title">Drop your .xer file here</div>
+          <div class="upload-sub" id="upload-sub-text">Select a project first to enable upload</div>
+        </div>
+        <div class="file-tag" id="file-tag">
+          <div class="file-tag-icon">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div style="flex:1">
+            <div class="file-tag-name" id="file-tag-name"></div>
+            <div class="file-tag-size" id="file-tag-size"></div>
+          </div>
+          <button class="file-tag-clear" id="file-clear">&times;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: XER Project Selection (shown after detect-projects) -->
+    <div class="card" id="project-step" style="display:none;margin-bottom:12px;border:2px solid var(--blue-mid)">
+      <div class="card-head" style="background:var(--blue-pale)">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+          <div class="card-title" style="color:var(--blue)">
+            <svg width="14" height="14" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+            <span id="step3-title">Step 3 — Select Actual &amp; Baseline Projects</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0">
+        <!-- Spinner while detecting -->
+        <div id="detecting-msg" style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--g500);padding:16px 20px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" class="spin-icon">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          Detecting projects in XER file...
+        </div>
+        <!-- Too many projects error -->
+        <div id="proj-count-error" style="display:none;padding:16px 20px">
+          <div style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:9px;padding:13px 16px;display:flex;align-items:flex-start;gap:10px">
+            <svg width="16" height="16" fill="none" stroke="#dc2626" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            <div>
+              <div id="proj-detect-error-title" style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:4px">Too many projects in this XER file</div>
+              <div id="proj-count-error-msg" style="font-size:12px;color:#991b1b;line-height:1.5"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Single project card (1 project = baseline only, auto-selected) -->
+        <div id="single-project-card" style="display:none;padding:16px 20px">
+          <div style="background:var(--blue-pale);border:1.5px solid var(--blue-mid);border-radius:9px;padding:12px 16px">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:6px">
+              <svg width="10" height="10" fill="var(--blue)" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:3px"><circle cx="12" cy="12" r="10"/></svg>
+              Baseline Schedule
+            </div>
+            <div id="single-proj-name" style="font-size:13px;font-weight:700;color:var(--g900);line-height:1.3">—</div>
+            <div id="single-proj-id" style="font-size:10px;font-family:var(--mono);color:var(--g500);margin-top:2px"></div>
+            <div id="single-proj-date" style="font-size:10px;font-family:var(--mono);color:var(--g400);margin-top:4px">—</div>
+          </div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--g100);font-size:11px;color:var(--g500);display:flex;align-items:center;gap:5px">
+            <svg width="12" height="12" fill="none" stroke="var(--warning)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Single project detected — Baseline Only. Metrics #10, #11, and #14 require a separate Actual schedule.
+          </div>
+        </div>
+
+        <!-- Auto-assignment card (2 projects) -->
+        <div id="auto-assign-card" style="display:none;padding:16px 20px">
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center">
+            <div style="background:var(--success-bg);border:1.5px solid var(--success-bd);border-radius:9px;padding:12px 16px">
+              <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--success);margin-bottom:6px">
+                <svg width="10" height="10" fill="var(--success)" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:3px"><circle cx="12" cy="12" r="10"/></svg>
+                Actual Schedule
+              </div>
+              <div id="auto-actual-name" style="font-size:13px;font-weight:700;color:var(--g900);line-height:1.3">—</div>
+              <div id="auto-actual-id" style="font-size:10px;font-family:var(--mono);color:var(--g500);margin-top:2px"></div>
+              <div id="auto-actual-date" style="font-size:10px;font-family:var(--mono);color:var(--g400);margin-top:4px">—</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+              <button onclick="swapAutoAssign()" title="Swap actual and baseline"
+                style="background:var(--white);border:1.5px solid var(--border-2);border-radius:7px;padding:7px 10px;cursor:pointer;color:var(--blue);transition:.15s;flex-shrink:0"
+                onmouseover="this.style.background='var(--blue-pale)'" onmouseout="this.style.background='var(--white)'">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                </svg>
+              </button>
+              <span style="font-size:9px;color:var(--g400);font-weight:600;letter-spacing:.03em">SWAP</span>
+            </div>
+            <div style="background:var(--blue-pale);border:1.5px solid var(--blue-mid);border-radius:9px;padding:12px 16px">
+              <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:6px">
+                <svg width="10" height="10" fill="var(--blue)" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:3px"><circle cx="12" cy="12" r="10"/></svg>
+                Baseline Schedule
+              </div>
+              <div id="auto-baseline-name" style="font-size:13px;font-weight:700;color:var(--g900);line-height:1.3">—</div>
+              <div id="auto-baseline-id" style="font-size:10px;font-family:var(--mono);color:var(--g500);margin-top:2px"></div>
+              <div id="auto-baseline-date" style="font-size:10px;font-family:var(--mono);color:var(--g400);margin-top:4px">—</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--g100);font-size:11px;color:var(--g400);display:flex;align-items:center;gap:5px">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Auto-assigned from 2 projects detected in XER file
+          </div>
+          <!-- hidden radios for 2-project auto mode -->
+          <div id="auto-hidden-inputs" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <button id="run-btn" class="btn btn-primary" onclick="runAnalysis()"
+      style="padding:12px 28px;font-size:14px;opacity:.4;pointer-events:none">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      Run DCMA Assessment
+    </button>
+
+    <!-- Progress -->
+    <div class="progress-section" id="progress-section">
+      <div class="progress-header">
+        <span id="prog-text" style="font-weight:500">Initialising...</span>
+        <span id="prog-pct" style="font-family:var(--mono);font-weight:600;color:var(--blue)">0%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="progress-steps">
+        {% for lbl in ['Upload','Parse','Network','Metrics','Report'] %}
+        <div class="prog-step" id="pstep-{{ loop.index0 }}">
+          <div class="prog-step-dot">{{ loop.index }}</div>
+          <div class="prog-step-lbl">{{ lbl }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results">
+      <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
+        <div style="flex:1;height:1px;background:var(--g100)"></div>
+        <span style="font-size:11px;font-weight:700;color:var(--g400);text-transform:uppercase;letter-spacing:.1em">Assessment Results</span>
+        <div style="flex:1;height:1px;background:var(--g100)"></div>
+      </div>
+
+      <!-- Results hero -->
+      <div class="results-hero">
+        <div class="rs-ring">
+          <svg width="90" height="90" viewBox="0 0 96 96">
+            <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="7"/>
+            <circle cx="48" cy="48" r="40" fill="none" stroke-width="7"
+              stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="251"
+              id="score-arc" style="transition:stroke-dashoffset 1.2s ease;transform:rotate(-90deg);transform-origin:48px 48px"/>
+          </svg>
+          <div class="rs-ring-text">
+            <div class="rs-score" id="score-num">—</div>
+            <div class="rs-score-lbl">score</div>
+          </div>
+        </div>
+        <div class="rs-info">
+          <div class="rs-project" id="rs-project">—</div>
+          <div class="rs-meta">
+            <span id="rs-activities">—</span>
+            <span>&middot;</span>
+            <span id="rs-relationships">—</span>
+            <span>&middot;</span>
+            <span id="rs-datadate">—</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+            <span id="rs-grade" class="badge">—</span>
+            <span id="rs-passed" style="font-size:13px;color:rgba(255,255,255,.7)">—</span>
+          </div>
+          <div class="rs-actions">
+            <a id="view-full-btn" href="#" class="btn" style="background:var(--white);color:var(--blue);font-weight:600">
+              View Full Report &rarr;
+            </a>
+            <a href="/new-check" class="btn" style="background:rgba(255,255,255,.1);color:var(--white);border:1px solid rgba(255,255,255,.2)">New Check</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric cards -->
+      <div class="metrics-grid" id="metrics-grid"></div>
+
+      <!-- Violations drawers -->
+      <div id="viols-container"></div>
+    </div>
+  </div>
+
+  <!-- Right config panel -->
+  <div style="position:sticky;top:72px">
+    <div class="card">
+      <div class="card-head" style="display:flex;align-items:center;justify-content:space-between">
+        <div class="card-title">
+          <svg width="14" height="14" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 19.07l-1.41 1.41M20 12h-2M6 12H4M4.93 4.93l1.41 1.41M18.66 18.66l1.41 1.41M12 4V2m0 18v2"/></svg>
+          Thresholds
+        </div>
+        <button onclick="resetDefaults()" class="btn btn-outline btn-sm" style="font-size:10px;padding:3px 9px">Reset</button>
+      </div>
+      <div style="max-height:480px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:var(--g50)">
+              <th style="padding:7px 4px;width:22px"></th>
+              <th style="padding:7px 8px;text-align:left;font-weight:600;color:var(--g400);font-size:10px;text-transform:uppercase;letter-spacing:.05em">#</th>
+              <th style="padding:7px 5px;text-align:left;font-weight:600;color:var(--g400);font-size:10px;text-transform:uppercase;letter-spacing:.05em">Metric</th>
+              <th style="padding:7px 8px;text-align:right;font-weight:600;color:var(--g400);font-size:10px;text-transform:uppercase;letter-spacing:.05em">Value</th>
+            </tr>
+          </thead>
+          <tbody id="threshold-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DCMA reference -->
+    <div class="card" style="margin-top:12px">
+      <div class="card-head">
+        <div class="card-title" style="font-size:12px">
+          <svg width="13" height="13" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          DCMA Limits
+        </div>
+      </div>
+      <div style="padding:0;max-height:200px;overflow-y:auto">
+        {% set thresh = [('Open Ends','≤ 5%'),('Leads','≤ 0%'),('Lags','≤ 5%'),('FS Relationships','≥ 90%'),('Hard Constraints','≤ 5%'),('High Float','≤ 5%'),('Negative Float','≤ 0%'),('Long Duration','≤ 5%'),('Invalid Dates','≤ 0%'),('Resources','≤ 0%'),('Missed Tasks','≤ 5%'),('CP Test','Pass/Fail'),('CPLI','≥ 0.95'),('BEI','≥ 0.95')] %}
+        {% for name, val in thresh %}
+        <div class="thresh-row">
+          <span style="color:var(--g600);font-size:11px">
+            <span style="font-family:var(--mono);font-size:9px;color:var(--blue);margin-right:3px">#{{ loop.index }}</span>{{ name }}
+          </span>
+          <span class="thresh-val">{{ val }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let selectedFile  = null;
+let uploadToken   = null;
+let detectedProjs = [];
+let assessMode    = 'standard'; // 'standard' | 'baseline'
+let autoAssignMode = false;     // true when exactly 2 projects detected
+let autoActualIdx  = 0;         // index into detectedProjs for actual
+let autoBaselineIdx = 1;        // index into detectedProjs for baseline
+const enabledMetrics = new Set([1,2,3,4,5,6,7,8,9,10,11,12,13,14]);
+const BASELINE_ONLY_DISABLED = new Set([10, 11, 14]); // metrics needing actual schedule data
+
+const THRESHOLD_CONFIG = [
+  { id:'good_pct', num:'G', name:'Good grade',        unit:'%',     defaultVal:76,   prefix:'≥', desc:'Min score for GOOD' },
+  { id:'fair_pct', num:'F', name:'Fair grade',         unit:'%',     defaultVal:60,   prefix:'≥', desc:'Min score for FAIR' },
+  { id:'m1_pct',   num:1,  name:'Open Ends',        unit:'%',     defaultVal:5,    prefix:'≤', desc:'Dangling activities' },
+  { id:'m2_pct',   num:2,  name:'Leads',             unit:'%',     defaultVal:0,    prefix:'≤', desc:'Negative lags' },
+  { id:'m3_pct',   num:3,  name:'Lags',              unit:'%',     defaultVal:5,    prefix:'≤', desc:'Positive lags' },
+  { id:'m4_fs_pct',num:4,  name:'FS Relationships',  unit:'%',     defaultVal:90,   prefix:'≥', desc:'Min FS %' },
+  { id:'m5_pct',   num:5,  name:'Hard Constraints',  unit:'%',     defaultVal:5,    prefix:'≤', desc:'Hard constraints' },
+  { id:'m6_days',  num:6,  name:'High Float (days)',  unit:'days',  defaultVal:44,   prefix:'>',  desc:'Float limit' },
+  { id:'m6_pct',   num:6,  name:'High Float (%)',     unit:'%',     defaultVal:5,    prefix:'≤', desc:'Max % over limit' },
+  { id:'m7_pct',   num:7,  name:'Negative Float',    unit:'%',     defaultVal:0,    prefix:'≤', desc:'Behind schedule' },
+  { id:'m8_days',  num:8,  name:'Long Duration(days)',unit:'days',  defaultVal:44,   prefix:'>',  desc:'Duration limit' },
+  { id:'m8_pct',   num:8,  name:'Long Duration (%)', unit:'%',     defaultVal:5,    prefix:'≤', desc:'Max % over limit' },
+  { id:'m9_pct',   num:9,  name:'Invalid Dates',     unit:'%',     defaultVal:0,    prefix:'≤', desc:'Date integrity' },
+  { id:'m10_pct',  num:10, name:'Resources',          unit:'%',     defaultVal:0,    prefix:'≤', desc:'Missing assignments' },
+  { id:'m11_pct',  num:11, name:'Missed Tasks',        unit:'%',     defaultVal:5,    prefix:'≤', desc:'Past-baseline incomplete' },
+  { id:'m12_cpt',  num:12, name:'Critical Path Test', unit:'',      defaultVal:1,    prefix:'',  desc:'Network logic test', passfail:true },
+  { id:'m13_cpli', num:13, name:'CPLI',               unit:'index', defaultVal:0.95, prefix:'≥', desc:'Critical path length index' },
+  { id:'m14_bei',  num:14, name:'BEI',                unit:'index', defaultVal:0.95, prefix:'≥', desc:'Baseline execution index' },
+];
+
+function buildThresholdTable() {
+  const tbody = document.getElementById('threshold-body');
+  tbody.innerHTML = '';
+
+  function addSection(label, bg, color, border) {
+    const hdr = document.createElement('tr');
+    hdr.innerHTML = `<td colspan="4" style="padding:4px 8px;background:${bg};font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${color};border-bottom:1px solid ${border}">— ${label} —</td>`;
+    tbody.appendChild(hdr);
+  }
+
+  addSection('Grade Thresholds', 'var(--blue-pale)', 'var(--blue)', 'var(--blue-mid)');
+  let metricSectionAdded = false;
+  const seenNums = new Set();
+
+  THRESHOLD_CONFIG.forEach(cfg => {
+    const isGrade = typeof cfg.num !== 'number';
+    if (!metricSectionAdded && !isGrade) {
+      metricSectionAdded = true;
+      addSection('Metric Thresholds', 'var(--g50)', 'var(--g400)', 'var(--g100)');
+    }
+
+    const tr = document.createElement('tr');
+    tr.dataset.metricNum = cfg.num;
+    tr.style.borderBottom = '1px solid var(--g50)';
+    const step = cfg.unit === '%' || cfg.unit === 'days' ? '1' : '0.01';
+
+    // Toggle checkbox: only for metric rows, only on first row per metric number
+    let toggleCell = `<td style="padding:6px 4px;text-align:center;vertical-align:middle"></td>`;
+    if (!isGrade && !seenNums.has(cfg.num)) {
+      seenNums.add(cfg.num);
+      toggleCell = `<td style="padding:6px 4px;text-align:center;vertical-align:middle">
+        <input type="checkbox" class="metric-toggle" data-num="${cfg.num}" checked
+          title="Enable/disable this metric"
+          style="width:13px;height:13px;cursor:pointer;accent-color:var(--blue)"
+          onchange="toggleMetric(${cfg.num},this.checked)">
+      </td>`;
+    }
+
+    const valueCell = cfg.passfail
+      ? `<td style="padding:6px 8px;text-align:right;vertical-align:middle">
+           <span style="font-family:var(--mono);font-size:10px;color:var(--blue);background:var(--blue-pale);padding:2px 7px;border-radius:4px;font-weight:500">Pass/Fail</span>
+         </td>`
+      : `<td style="padding:6px 8px;text-align:right;vertical-align:middle">
+           <div style="display:inline-flex;align-items:center;gap:3px">
+             <span style="font-size:9px;color:var(--g400)">${cfg.prefix}</span>
+             <input type="number" id="thresh-${cfg.id}" value="${cfg.defaultVal}" step="${step}" min="0"
+               style="width:52px;border:1.5px solid var(--g100);border-radius:5px;padding:4px 5px;font-family:var(--mono);font-size:11px;color:var(--g900);text-align:right;background:var(--g50);outline:none;transition:border-color .2s"
+               onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--g100)'"
+             >
+             <span style="font-size:9px;color:var(--g400);min-width:22px">${cfg.unit}</span>
+           </div>
+         </td>`;
+    tr.innerHTML = `
+      ${toggleCell}
+      <td style="padding:6px 8px;font-family:var(--mono);font-size:10px;color:var(--blue);font-weight:600;vertical-align:middle">#${cfg.num}</td>
+      <td style="padding:6px 5px;vertical-align:middle">
+        <div style="font-weight:500;color:var(--g700);font-size:11px;line-height:1.2">${cfg.name}</div>
+        <div style="font-size:9px;color:var(--g300)">${cfg.desc}</div>
+      </td>
+      ${valueCell}`;
+    tbody.appendChild(tr);
+  });
+}
+
+function toggleMetric(num, enabled) {
+  if (enabled) enabledMetrics.add(num);
+  else enabledMetrics.delete(num);
+  document.querySelectorAll(`tr[data-metric-num="${num}"]`).forEach(tr => {
+    tr.style.opacity = enabled ? '1' : '0.38';
+    tr.querySelectorAll('input[type="number"]').forEach(inp => inp.disabled = !enabled);
+  });
+}
+
+function resetDefaults() {
+  THRESHOLD_CONFIG.forEach(cfg => {
+    const el = document.getElementById('thresh-' + cfg.id);
+    if (el) { el.value = cfg.defaultVal; el.disabled = false; }
+  });
+  // Re-enable all metrics
+  for (let n = 1; n <= 14; n++) enabledMetrics.add(n);
+  document.querySelectorAll('.metric-toggle').forEach(cb => {
+    cb.checked = true;
+    document.querySelectorAll(`tr[data-metric-num="${cb.dataset.num}"]`).forEach(tr => {
+      tr.style.opacity = '1';
+    });
+  });
+  showToast('Thresholds reset to DCMA defaults', 'info');
+}
+
+function collectThresholds() {
+  const obj = {};
+  THRESHOLD_CONFIG.forEach(cfg => {
+    const el = document.getElementById('thresh-' + cfg.id);
+    if (el && el.value !== '' && parseFloat(el.value) != cfg.defaultVal)
+      obj[cfg.id] = parseFloat(el.value);
+  });
+  return obj;
+}
+
+buildThresholdTable();
+
+// Grade threshold validation: fair (poor boundary) must always be < good
+function validateGradeThresholds() {
+  const goodEl = document.getElementById('thresh-good_pct');
+  const fairEl = document.getElementById('thresh-fair_pct');
+  const good = parseFloat(goodEl.value);
+  const fair = parseFloat(fairEl.value);
+  let errEl = document.getElementById('grade-thresh-error');
+  if (!errEl) {
+    errEl = document.createElement('div');
+    errEl.id = 'grade-thresh-error';
+    errEl.style.cssText = 'font-size:11px;color:var(--danger);background:var(--danger-bg);padding:6px 10px;border-radius:6px;margin-top:6px;display:none';
+    goodEl.closest('tr').parentElement.parentElement.after(errEl);
+  }
+  if (!isNaN(good) && !isNaN(fair) && fair >= good) {
+    errEl.textContent = `Poor/Fair boundary (${fair}%) must be lower than Good boundary (${good}%). Please fix before running.`;
+    errEl.style.display = 'block';
+    return false;
+  }
+  errEl.style.display = 'none';
+  return true;
+}
+
+document.getElementById('thresh-fair_pct').addEventListener('input', validateGradeThresholds);
+document.getElementById('thresh-good_pct').addEventListener('input', validateGradeThresholds);
+
+function applyMode(mode) {
+  assessMode = mode;
+  const isBaseline = mode === 'baseline';
+  BASELINE_ONLY_DISABLED.forEach(num => {
+    const cb = document.querySelector(`.metric-toggle[data-num="${num}"]`);
+    if (cb) {
+      if (isBaseline) {
+        cb.checked = false;
+        cb.disabled = true;
+        enabledMetrics.delete(num);
+        document.querySelectorAll(`tr[data-metric-num="${num}"]`).forEach(tr => {
+          tr.style.opacity = '0.38';
+          tr.title = 'Requires a separate baseline project';
+          tr.querySelectorAll('input[type="number"]').forEach(inp => inp.disabled = true);
+        });
+      } else {
+        cb.checked = true;
+        cb.disabled = false;
+        enabledMetrics.add(num);
+        document.querySelectorAll(`tr[data-metric-num="${num}"]`).forEach(tr => {
+          tr.style.opacity = '1';
+          tr.title = '';
+          tr.querySelectorAll('input[type="number"]').forEach(inp => inp.disabled = false);
+        });
+      }
+    }
+  });
+}
+
+function renderAutoAssign() {
+  const actual   = detectedProjs[autoActualIdx];
+  const baseline = detectedProjs[autoBaselineIdx];
+  document.getElementById('auto-actual-name').textContent   = actual.wbs_name   || actual.proj_name;
+  document.getElementById('auto-actual-id').textContent     = (actual.wbs_name && actual.proj_name !== actual.wbs_name) ? 'ID: ' + actual.proj_name : '';
+  document.getElementById('auto-actual-date').textContent   = actual.data_date  ? 'Data date: ' + actual.data_date : '—';
+  document.getElementById('auto-baseline-name').textContent = baseline.wbs_name || baseline.proj_name;
+  document.getElementById('auto-baseline-id').textContent   = (baseline.wbs_name && baseline.proj_name !== baseline.wbs_name) ? 'ID: ' + baseline.proj_name : '';
+  document.getElementById('auto-baseline-date').textContent = baseline.data_date ? 'Data date: ' + baseline.data_date : '—';
+  // Inject hidden radio values so getRadioValue() works
+  const wrap = document.getElementById('auto-hidden-inputs');
+  wrap.innerHTML = `
+    <input type="radio" name="actual-radio"   value="${actual.proj_id}"   checked>
+    <input type="radio" name="baseline-radio" value="${baseline.proj_id}" checked>`;
+  validateProjSelection();
+}
+
+function swapAutoAssign() {
+  [autoActualIdx, autoBaselineIdx] = [autoBaselineIdx, autoActualIdx];
+  renderAutoAssign();
+}
+
+function rebuildProjRows() {
+  // Hide all project UI panels first
+  document.getElementById('single-project-card').style.display = 'none';
+  document.getElementById('auto-assign-card').style.display    = 'none';
+
+  // ── 1 project: baseline only, auto-selected ──────────────────────────────
+  if (detectedProjs.length === 1) {
+    autoAssignMode = false;
+    applyMode('baseline');
+    const p = detectedProjs[0];
+    document.getElementById('single-proj-name').textContent = p.wbs_name || p.proj_name;
+    document.getElementById('single-proj-id').textContent   = (p.wbs_name && p.proj_name !== p.wbs_name) ? 'ID: ' + p.proj_name : '';
+    document.getElementById('single-proj-date').textContent = p.data_date ? 'Data date: ' + p.data_date : '—';
+    document.getElementById('single-project-card').style.display = 'block';
+    document.getElementById('step3-title').innerHTML = 'Step 3 — Baseline Schedule';
+    // Inject hidden radio so getRadioValue works
+    document.getElementById('auto-hidden-inputs').innerHTML =
+      `<input type="radio" name="baseline-radio" value="${p.proj_id}" checked>`;
+    validateProjSelection();
+    return;
+  }
+
+  // ── 2 projects: auto-assign actual + baseline ─────────────────────────────
+  autoAssignMode  = true;
+  autoActualIdx   = 0;
+  autoBaselineIdx = 1;
+  applyMode('standard');
+  document.getElementById('auto-assign-card').style.display = 'block';
+  document.getElementById('step3-title').innerHTML = 'Step 3 — Projects Auto-Assigned';
+  renderAutoAssign();
+}
+
+// Enable/disable upload zone based on project selection
+function onProjectSelectChange() {
+  const psel = document.getElementById('project-select');
+  const dz   = document.getElementById('drop-zone');
+  const sub  = document.getElementById('upload-sub-text');
+  const reqMsg = document.getElementById('proj-required-msg');
+  if (psel && psel.value) {
+    dz.style.opacity      = '1';
+    dz.style.pointerEvents = 'auto';
+    sub.textContent = 'or click to browse \u00b7 Primavera P6 format \u00b7 max 50 MB';
+    if (reqMsg) reqMsg.style.display = 'none';
+  } else {
+    dz.style.opacity      = '.45';
+    dz.style.pointerEvents = 'none';
+    sub.textContent = 'Select a project first to enable upload';
+    clearFile();
+  }
+  validateProjSelection();
+}
+
+// File handling
+const dropZone = document.getElementById('drop-zone');
+const xerInput = document.getElementById('xer-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+xerInput.addEventListener('change', () => { if (xerInput.files[0]) setFile(xerInput.files[0]); });
+document.getElementById('file-clear').addEventListener('click', e => { e.stopPropagation(); clearFile(); });
+
+function setFile(f) {
+  const psel = document.getElementById('project-select');
+  if (!psel || !psel.value) {
+    showToast('Please select a project first.', 'error');
+    return;
+  }
+  if (!f.name.toLowerCase().endsWith('.xer')) {
+    showToast('Please select a .xer file', 'error');
+    return;
+  }
+  selectedFile    = f;
+  uploadToken     = null;
+  detectedProjs   = [];
+  autoAssignMode  = false;
+  document.getElementById('file-tag-name').textContent = f.name;
+  document.getElementById('file-tag-size').textContent = (f.size / 1024 / 1024).toFixed(2) + ' MB';
+  document.getElementById('file-tag').classList.add('show');
+
+  // Disable run btn until projects are selected
+  const btn = document.getElementById('run-btn');
+  btn.style.opacity = '.4'; btn.style.pointerEvents = 'none';
+
+  // Reset step 3
+  document.getElementById('project-step').style.display          = 'none';
+  document.getElementById('detecting-msg').style.display         = 'flex';
+  document.getElementById('proj-count-error').style.display      = 'none';
+
+
+  detectProjects(f);
+}
+
+function clearFile() {
+  selectedFile   = null;
+  uploadToken    = null;
+  detectedProjs  = [];
+  autoAssignMode = false;
+  autoActualIdx  = 0;
+  autoBaselineIdx = 1;
+  xerInput.value = '';
+  document.getElementById('file-tag').classList.remove('show');
+  document.getElementById('project-step').style.display          = 'none';
+  document.getElementById('single-project-card').style.display   = 'none';
+  document.getElementById('auto-assign-card').style.display      = 'none';
+  document.getElementById('proj-count-error').style.display      = 'none';
+
+  const btn = document.getElementById('run-btn');
+  btn.style.opacity = '.4'; btn.style.pointerEvents = 'none';
+  // Re-enable baseline-only metrics and reset mode
+  applyMode('standard');
+}
+
+async function detectProjects(f) {
+  document.getElementById('project-step').style.display = 'block';
+  document.getElementById('detecting-msg').style.display = 'flex';
+
+  const fd = new FormData();
+  fd.append('xer_file', f);
+
+  try {
+    const resp = await fetch('/api/detect-projects', {
+      method: 'POST', body: fd,
+      headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
+    });
+    const data = await resp.json();
+
+    if (data.error) {
+      document.getElementById('detecting-msg').style.display = 'none';
+      document.getElementById('proj-detect-error-title').textContent = 'Could not read XER file';
+      document.getElementById('proj-count-error-msg').textContent    = data.error;
+      document.getElementById('proj-count-error').style.display      = 'block';
+      showToast(data.error, 'error', 8000);
+      return;
+    }
+
+    document.getElementById('detecting-msg').style.display    = 'none';
+    document.getElementById('proj-count-error').style.display = 'none';
+
+    if (data.projects.length > 2) {
+      document.getElementById('proj-count-error').style.display = 'block';
+      document.getElementById('proj-count-error-msg').textContent =
+        `${data.projects.length} projects were found. This tool only accepts XER files with 1 project (Baseline Only) or 2 projects (Actual + Baseline). Please re-export with a single schedule or an Actual + Baseline pair.`;
+      showToast(`${data.projects.length} projects detected — only 1 or 2 are accepted.`, 'error', 7000);
+      return;
+    }
+
+    uploadToken    = data.token;
+    detectedProjs  = data.projects;
+    autoAssignMode = false;
+
+    rebuildProjRows();
+    if (data.projects.length === 1) {
+      showToast('1 project found — Baseline Only mode. Metrics #10, #11, #14 disabled.', 'info', 6000);
+    } else {
+      showToast('2 projects detected — auto-assigned as Actual + Baseline.', 'success', 3000);
+    }
+
+  } catch(e) {
+    showToast('Network error during project detection: ' + e.message, 'error', 8000);
+    document.getElementById('detecting-msg').style.display = 'none';
+  }
+}
+
+function getRadioValue(name) {
+  const checked = document.querySelector(`input[name="${name}"]:checked`);
+  return checked ? checked.value : null;
+}
+
+function validateProjSelection() {
+  const btn = document.getElementById('run-btn');
+
+  if (!uploadToken) {
+    btn.style.opacity = '.4'; btn.style.pointerEvents = 'none';
+    return;
+  }
+
+  // 1 project (baseline-only) or 2-project auto-assign: always valid once token exists
+  if (autoAssignMode || assessMode === 'baseline') {
+    btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+    return;
+  }
+}
+
+// Progress animation
+const STEPS = [
+  [12, 'Uploading file...', 0],
+  [30, 'Parsing XER tables...', 1],
+  [52, 'Building activity network...', 2],
+  [78, 'Running 14 DCMA metrics...', 3],
+  [95, 'Generating report...', 4],
+  [100,'Analysis complete', 4],
+];
+
+function animateProgress() {
+  document.getElementById('progress-section').classList.add('show');
+  let i = 0;
+  function tick() {
+    if (i >= STEPS.length) return;
+    const [pct, txt, step] = STEPS[i++];
+    document.getElementById('prog-fill').style.width = pct + '%';
+    document.getElementById('prog-pct').textContent = pct + '%';
+    document.getElementById('prog-text').textContent = txt;
+    for (let s = 0; s <= 4; s++) {
+      const el = document.getElementById('pstep-' + s);
+      el.classList.toggle('done', s < step);
+      el.classList.toggle('active', s === step);
+    }
+    if (i < STEPS.length) setTimeout(tick, 600);
+  }
+  tick();
+}
+
+async function runAnalysis() {
+  if (!selectedFile || !uploadToken) return;
+
+  if (!validateGradeThresholds()) {
+    showToast('Fix grade thresholds before running: Poor boundary must be lower than Good.', 'error');
+    return;
+  }
+
+  let actualProjId, baselineProjId;
+  if (assessMode === 'baseline') {
+    baselineProjId = getRadioValue('baseline-radio');
+    actualProjId   = baselineProjId;
+    if (!baselineProjId) {
+      showToast('Please select a schedule project.', 'error');
+      return;
+    }
+  } else if (autoAssignMode) {
+    actualProjId   = detectedProjs[autoActualIdx].proj_id;
+    baselineProjId = detectedProjs[autoBaselineIdx].proj_id;
+  } else {
+    actualProjId   = getRadioValue('actual-radio');
+    baselineProjId = getRadioValue('baseline-radio');
+    if (!actualProjId || !baselineProjId || actualProjId === baselineProjId) {
+      showToast('Please select different actual and baseline projects.', 'error');
+      return;
+    }
+  }
+
+  const btn = document.getElementById('run-btn');
+  btn.style.opacity = '.4'; btn.style.pointerEvents = 'none';
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('viols-container').innerHTML = '';
+
+  const psel = document.getElementById('project-select');
+
+  const fd = new FormData();
+  fd.append('upload_token',     uploadToken);
+  fd.append('actual_proj_id',   actualProjId);
+  fd.append('baseline_proj_id', baselineProjId);
+  fd.append('project_id',       psel ? psel.value : '');
+  fd.append('enabled_metrics',  JSON.stringify(Array.from(enabledMetrics)));
+  fd.append('assess_mode',      assessMode);
+  fd.append('thresholds', JSON.stringify(collectThresholds()));
+
+  animateProgress();
+
+  const ctrl = new AbortController();
+  const analysisTimer = setTimeout(() => ctrl.abort(), 120000); // 2-min timeout
+
+  try {
+    const resp = await fetch('/api/analyze', {
+      method: 'POST', body: fd, signal: ctrl.signal,
+      headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
+    });
+    clearTimeout(analysisTimer);
+    const data = await resp.json();
+    if (data.error) {
+      showToast('Error: ' + data.error, 'error', 8000);
+      btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+      return;
+    }
+    // Token is consumed — redirect to full report page
+    uploadToken = null;
+    showToast('Analysis complete — opening report…', 'success', 2000);
+    setTimeout(() => { window.location.href = '/check/' + data.check_id; }, 900);
+  } catch(e) {
+    clearTimeout(analysisTimer);
+    const msg = e.name === 'AbortError'
+      ? 'Analysis timed out (over 2 minutes). Try a smaller file or contact support.'
+      : 'Network error: ' + e.message;
+    showToast(msg, 'error', 8000);
+    btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+  }
+}
+
+function renderResults(data) {
+  const score    = data.score;
+  const goodPct  = data.good_pct || 76;
+  const fairPct  = data.fair_pct || 60;
+  const color    = score >= goodPct ? '#16a34a' : score >= fairPct ? '#d97706' : '#dc2626';
+
+  document.getElementById('score-arc').style.stroke = color;
+  document.getElementById('score-arc').style.strokeDashoffset = 251 - (251 * score / 100);
+  document.getElementById('score-num').textContent = score + '%';
+
+  document.getElementById('rs-project').textContent = data.project_name;
+  document.getElementById('rs-activities').textContent = data.activity_count + ' activities';
+  document.getElementById('rs-relationships').textContent = data.relationship_count + ' rels';
+  document.getElementById('rs-datadate').textContent = 'date: ' + (data.data_date || 'N/A');
+
+  const gb = document.getElementById('rs-grade');
+  gb.textContent = data.grade;
+  gb.className = 'badge badge-' + data.grade.toLowerCase();
+  document.getElementById('rs-passed').textContent = data.passed + '/' + data.total + ' passing';
+  document.getElementById('view-full-btn').href = '/check/' + data.check_id;
+
+  const grid = document.getElementById('metrics-grid');
+  grid.innerHTML = '';
+
+  data.metrics.forEach(m => {
+    const pass = m.status === 'PASS';
+    const mcolor = pass ? 'var(--success)' : 'var(--danger)';
+    const card = document.createElement('div');
+    card.className = 'md-card ' + (pass ? 'pass' : 'fail');
+    card.innerHTML = `
+      <div class="msi ${pass ? 'msi-pass' : 'msi-fail'}" style="font-size:9px;font-weight:700">${pass ? 'P' : 'F'}</div>
+      <div class="md-left">
+        <div class="md-title">${m.metric.replace(/^Metric #\d+ - /, '')}</div>
+        <div class="md-sub">${m.violations} violation(s) &middot; ${m.threshold}</div>
+        <div class="md-bar"><div class="md-bar-fill" style="width:${Math.min(m.percentage,100)}%;background:${mcolor}"></div></div>
+      </div>
+      <div class="md-right">
+        <div class="md-pct" style="color:${mcolor}">${m.percentage}%</div>
+        <div class="md-status" style="color:${mcolor}">${m.status}</div>
+      </div>
+    `;
+    if (!pass && m.details && m.details.length) {
+      card.addEventListener('click', () => toggleViolations(m));
+    }
+    grid.appendChild(card);
+  });
+
+  document.getElementById('results').classList.add('show');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const failCount = data.metrics.filter(m => m.status === 'FAIL').length;
+  if (failCount === 0) showToast('Perfect score! All 14 metrics pass.', 'success');
+  else showToast(`Analysis complete: ${data.passed}/${data.total} metrics passing`, failCount > 5 ? 'error' : 'info');
+}
+
+function toggleViolations(m) {
+  const vc = document.getElementById('viols-container');
+  const existing = document.getElementById('drawer-' + m.metric_no);
+  if (existing) { existing.classList.toggle('show'); return; }
+
+  const drawer = document.createElement('div');
+  drawer.className = 'viols-drawer show';
+  drawer.id = 'drawer-' + m.metric_no;
+
+  const rows = m.details.slice(0, 30).map(v => {
+    let label;
+    if (v.task_code) {
+      const name = v.task_name || v.task_code;
+      const showCode = name !== v.task_code;
+      label = `<span style="font-size:12px;font-weight:600;color:var(--g800)">${name}</span>`
+            + (showCode ? `<span class="viol-code" style="margin-left:6px">${v.task_code}</span>` : '');
+    } else if (v.pred_code) {
+      const pName = (v.pred_name && v.pred_name !== v.pred_code) ? v.pred_name : v.pred_code;
+      const sName = (v.succ_name && v.succ_name !== v.succ_code) ? v.succ_name : (v.succ_code || '?');
+      const namesLine = `${pName} → ${sName}`;
+      const codesLine = `${v.pred_code} → ${v.succ_code || '?'}`;
+      label = `<span style="font-size:12px;font-weight:600;color:var(--g800)">${namesLine}</span>`
+            + (namesLine !== codesLine ? `<span class="viol-code" style="margin-left:6px">${codesLine}</span>` : '');
+    } else {
+      label = '<span class="viol-code">—</span>';
+    }
+    return `<div class="viol-row"><div>${label}</div><span class="viol-issue">${v.issue || ''}</span></div>`;
+  }).join('');
+
+  drawer.innerHTML = `
+    <div class="viols-head">
+      <span class="viols-title">${m.metric.replace(/^Metric #\d+ - /, '')}</span>
+      <span class="viols-count">${m.violations} violation(s)</span>
+    </div>
+    <div class="viols-body">${rows}${m.details.length > 30 ? `<div style="padding:8px 14px;font-size:11px;color:var(--g400);font-family:var(--mono)">+${m.details.length - 30} more — see full report</div>` : ''}</div>
+  `;
+  vc.appendChild(drawer);
+}
+
+// ── Searchable project combobox ──────────────────────────────────────────────
+let _projComboOpen = false;
+
+function openProjDropdown() {
+  const list = document.getElementById('proj-combo-list');
+  if (!list) return;
+  list.style.display = 'block';
+  _projComboOpen = true;
+  document.getElementById('proj-combo-arrow').style.transform = 'rotate(180deg)';
+  document.getElementById('proj-combo-input-wrap').style.borderColor = 'var(--blue)';
+  filterProjCombo();
+}
+
+function closeProjDropdown() {
+  const list = document.getElementById('proj-combo-list');
+  if (!list) return;
+  list.style.display = 'none';
+  _projComboOpen = false;
+  document.getElementById('proj-combo-arrow').style.transform = '';
+  // If nothing selected, restore border
+  const sel = document.getElementById('project-select');
+  document.getElementById('proj-combo-input-wrap').style.borderColor =
+    sel && sel.value ? 'var(--blue)' : 'var(--blue-mid)';
+}
+
+function filterProjCombo() {
+  const q = (document.getElementById('proj-combo-input').value || '').toLowerCase().trim();
+  const opts = document.querySelectorAll('.proj-combo-option');
+  let visible = 0;
+  opts.forEach(o => {
+    const match = !q || o.dataset.search.includes(q);
+    o.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  const empty = document.getElementById('proj-combo-empty');
+  if (empty) empty.style.display = visible === 0 ? 'block' : 'none';
+  document.getElementById('proj-combo-clear').style.display = q ? 'block' : 'none';
+}
+
+function selectProjOption(el) {
+  const id    = el.dataset.id;
+  const label = el.dataset.label;
+  // Update hidden select
+  const sel = document.getElementById('project-select');
+  sel.value = id;
+  sel.dispatchEvent(new Event('change'));
+  // Update visible input to show selected name
+  document.getElementById('proj-combo-input').value = label;
+  document.getElementById('proj-combo-input').style.color = 'var(--g900)';
+  document.getElementById('proj-combo-clear').style.display = 'block';
+  // Highlight selected row
+  document.querySelectorAll('.proj-combo-option').forEach(o =>
+    o.style.background = o === el ? 'var(--blue-pale)' : '');
+  closeProjDropdown();
+}
+
+function clearProjCombo(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('proj-combo-input').value = '';
+  document.getElementById('proj-combo-clear').style.display = 'none';
+  const sel = document.getElementById('project-select');
+  sel.value = '';
+  sel.dispatchEvent(new Event('change'));
+  document.querySelectorAll('.proj-combo-option').forEach(o => o.style.background = '');
+  filterProjCombo();
+  document.getElementById('proj-combo-input').focus();
+  openProjDropdown();
+}
+
+function projComboKey(e) {
+  const list   = document.getElementById('proj-combo-list');
+  const opts   = [...document.querySelectorAll('.proj-combo-option')].filter(o => o.style.display !== 'none');
+  const active = list ? list.querySelector('.proj-combo-option[style*="var(--blue-pale)"]') : null;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (!_projComboOpen) { openProjDropdown(); return; }
+    const idx = opts.indexOf(active);
+    const next = opts[idx + 1] || opts[0];
+    if (next) { opts.forEach(o => o.style.background=''); next.style.background='var(--blue-pale)'; next.scrollIntoView({block:'nearest'}); }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    const idx = opts.indexOf(active);
+    const prev = opts[idx - 1] || opts[opts.length - 1];
+    if (prev) { opts.forEach(o => o.style.background=''); prev.style.background='var(--blue-pale)'; prev.scrollIntoView({block:'nearest'}); }
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (active) selectProjOption(active);
+  } else if (e.key === 'Escape') {
+    closeProjDropdown();
+  }
+}
+
+// Close combo on outside click
+document.addEventListener('click', e => {
+  const combo = document.getElementById('proj-combo');
+  if (combo && !combo.contains(e.target)) closeProjDropdown();
+});
+</script>
+{% endblock %}

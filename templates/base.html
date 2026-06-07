@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>JESA · {% block title %}Dashboard{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --navy:      #0c1e3c;
+  --navy-2:    #132848;
+  --navy-3:    #1b3a5c;
+  --blue:      #1b4f9b;
+  --blue-hov:  #154186;
+  --blue-pale: #eef4ff;
+  --blue-mid:  #b8cff0;
+  --page-bg:   #f1f5f9;
+  --white:     #ffffff;
+  --border:    #e2e8f0;
+  --border-2:  #cbd5e1;
+  --tx-1: #0f172a;
+  --tx-2: #475569;
+  --tx-3: #94a3b8;
+  --tx-4: #cbd5e1;
+  --success:  #16a34a;
+  --warning:  #d97706;
+  --danger:   #dc2626;
+  --info:     #0369a1;
+  --success-bg:  #f0fdf4; --success-bd: #bbf7d0;
+  --warning-bg:  #fffbeb; --warning-bd: #fde68a;
+  --danger-bg:   #fef2f2; --danger-bd:  #fecaca;
+  --info-bg:     #e0f2fe; --info-bd:    #bae6fd;
+  --sh-sm: 0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+  --sh:    0 4px 12px rgba(15,23,42,.08), 0 2px 4px rgba(15,23,42,.04);
+  --sh-lg: 0 12px 32px rgba(15,23,42,.12), 0 4px 8px rgba(15,23,42,.06);
+  --sans: 'Inter', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --r: 8px; --rl: 12px;
+  /* legacy aliases */
+  --blue-dark:#154186; --blue-deeper:#0c1e3c; --blue-light:#2563eb;
+  --off:#f1f5f9;
+  --g50:#f8fafc; --g100:#e2e8f0; --g200:#cbd5e1;
+  --g300:#94a3b8; --g400:#64748b; --g500:#475569;
+  --g600:#374151; --g700:#334155; --g800:#1e293b; --g900:#0f172a;
+  --success-border:#bbf7d0; --danger-border:#fecaca;
+  --warning-border:#fde68a; --info-border:#bae6fd;
+  --shadow-sm:var(--sh-sm); --shadow:var(--sh); --shadow-lg:var(--sh-lg);
+  --radius:8px; --radius-lg:12px;
+}
+
+html,body{height:100%}
+body{
+  background:var(--page-bg);
+  color:var(--tx-1);
+  font-family:var(--sans);
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  font-size:14px;
+  line-height:1.5;
+}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--tx-3)}
+
+@keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.anim-fadeup{animation:fadeInUp .35s ease both}
+.anim-fadein{animation:fadeIn .3s ease both}
+.hidden{display:none!important}
+.anim-delay-1{animation-delay:.05s}.anim-delay-2{animation-delay:.10s}
+.anim-delay-3{animation-delay:.15s}.anim-delay-4{animation-delay:.20s}
+
+/* -- HORIZONTAL NAVBAR -- */
+.navbar{
+  position:fixed;top:0;left:0;right:0;
+  height:58px;
+  background:var(--navy);
+  display:flex;align-items:center;
+  padding:0 24px;
+  z-index:200;
+  box-shadow:0 2px 12px rgba(0,0,0,.2);
+  flex-shrink:0;
+}
+
+
+.nav-links{display:flex;align-items:center;gap:2px;position:absolute;left:50%;transform:translateX(-50%)}
+.nav-link{
+  display:flex;align-items:center;gap:7px;
+  padding:7px 13px;border-radius:var(--r);
+  font-size:13px;font-weight:500;
+  color:rgba(255,255,255,.55);text-decoration:none;
+  transition:background .15s,color .15s;white-space:nowrap;
+}
+.nav-link:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-link.active{background:rgba(27,79,155,.45);color:#fff}
+.nav-link-icon{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.nav-link.active .nav-link-icon,.nav-link:hover .nav-link-icon{opacity:1}
+.nav-sep{width:1px;height:20px;background:rgba(255,255,255,.1);margin:0 8px;flex-shrink:0}
+
+.nav-right{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0}
+.nav-clock{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.05em}
+.nav-user{display:flex;align-items:center;gap:8px}
+.nav-avatar{
+  width:30px;height:30px;border-radius:7px;
+  background:linear-gradient(135deg,var(--blue),var(--blue-hov));
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.nav-user-name{font-size:12px;font-weight:500;color:rgba(255,255,255,.6);white-space:nowrap}
+.nav-logout{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:var(--r);
+  font-family:var(--sans);font-size:12px;font-weight:500;
+  color:rgba(255,255,255,.4);text-decoration:none;
+  border:1px solid rgba(255,255,255,.1);transition:.15s;
+}
+.nav-logout:hover{background:rgba(220,38,38,.15);border-color:rgba(220,38,38,.3);color:#fca5a5}
+
+/* -- MAIN AREA -- */
+.main{margin-top:58px;flex:1;display:flex;flex-direction:column;width:100%;min-height:calc(100vh - 58px)}
+.content{flex:1;padding:28px 32px}
+
+/* -- COMPONENTS -- */
+
+/* Cards */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--rl);box-shadow:var(--sh-sm);overflow:hidden}
+.card-head{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:600;color:var(--tx-1);display:flex;align-items:center;gap:8px}
+.card-body{padding:20px}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.03em;border:1px solid}
+.badge-good,.badge-pass{background:var(--success-bg);color:var(--success);border-color:var(--success-bd)}
+.badge-fair{background:var(--warning-bg);color:var(--warning);border-color:var(--warning-bd)}
+.badge-poor,.badge-fail{background:var(--danger-bg);color:var(--danger);border-color:var(--danger-bd)}
+.badge-info{background:var(--info-bg);color:var(--info);border-color:var(--info-bd)}
+.badge-bonus{background:#f5f3ff;color:#7c3aed;border-color:#ddd6fe}
+.badge-admin{background:#fef3c7;color:#92400e;border-color:#fde68a}
+.badge-engineer{background:var(--blue-pale);color:var(--blue);border-color:var(--blue-mid)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--r);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;border:none;text-decoration:none;transition:.15s;white-space:nowrap}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 1px 3px rgba(37,99,235,.3)}
+.btn-primary:hover{background:var(--blue-hov);box-shadow:0 3px 10px rgba(37,99,235,.35)}
+.btn-outline{background:var(--white);color:var(--tx-2);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-pale)}
+.btn-danger{background:var(--white);color:var(--danger);border:1px solid var(--danger-bd)}
+.btn-danger:hover{background:var(--danger-bg)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-icon{padding:7px;border-radius:var(--r)}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--tx-3);letter-spacing:.04em;text-transform:uppercase;background:var(--page-bg);border-bottom:1px solid var(--border)}
+.tbl td{padding:12px 16px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:#f8fafc}
+
+/* Progress bar */
+.pbar{height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.pbar-blue{background:var(--blue)}
+.pbar-green{background:var(--success)}
+.pbar-amber{background:var(--warning)}
+.pbar-red{background:var(--danger)}
+
+/* Flash */
+.flash{padding:11px 15px;border-radius:var(--r);font-size:13px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;border:1px solid}
+.flash-error{background:var(--danger-bg);border-color:var(--danger-bd);color:var(--danger)}
+.flash-success{background:var(--success-bg);border-color:var(--success-bd);color:var(--success)}
+
+/* Metric status icon */
+.msi{width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.msi-pass{background:var(--success-bg);color:var(--success)}
+.msi-fail{background:var(--danger-bg);color:var(--danger)}
+
+/* Page header */
+.page-header{margin-bottom:24px}
+.page-title{font-size:21px;font-weight:700;color:var(--tx-1);letter-spacing:-.02em;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--tx-3)}
+
+/* Toast */
+#toast-container{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:9999;pointer-events:none}
+.toast{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--r);font-size:13px;font-weight:500;box-shadow:var(--sh-lg);pointer-events:auto;animation:fadeInUp .3s ease;max-width:350px;border:1px solid;background:var(--white)}
+.toast-success{color:var(--success);border-color:var(--success-bd)}
+.toast-error{color:var(--danger);border-color:var(--danger-bd)}
+.toast-info{color:var(--info);border-color:var(--info-bd)}
+.toast-close{margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:.5;font-size:16px;line-height:1;padding:0 2px}
+.toast-close:hover{opacity:1}
+
+@media(max-width:900px){
+  .nav-brand-label,.nav-clock,.nav-user-name{display:none}
+  .navbar{padding:0 12px}
+  .nav-link span{display:none}
+  .nav-link{padding:7px 9px}
+}
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-links">
+    <a href="/dashboard" class="nav-link {% if request.path=='/dashboard' %}active{% endif %}">
+      <svg class="nav-link-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <path d="M3 9.5L12 4l9 5.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
+        <path d="M9 21V12h6v9"/>
+      </svg>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="/new-check" class="nav-link {% if request.path=='/new-check' %}active{% endif %}">
+      <svg class="nav-link-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"/>
+        <line x1="12" y1="8" x2="12" y2="16"/>
+        <line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      <span>New Assessment</span>
+    </a>
+
+    <a href="/history" class="nav-link {% if request.path=='/history' %}active{% endif %}">
+      <svg class="nav-link-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span>History</span>
+    </a>
+
+    {% if session.role == 'admin' %}
+    <div class="nav-sep"></div>
+    <a href="/admin/projects" class="nav-link {% if '/admin/projects' in request.path %}active{% endif %}">
+      <svg class="nav-link-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+      </svg>
+      <span>Projects</span>
+    </a>
+    <a href="/admin/users" class="nav-link {% if request.path=='/admin/users' %}active{% endif %}">
+      <svg class="nav-link-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+      </svg>
+      <span>Users</span>
+    </a>
+    {% endif %}
+
+    <a href="/profile" class="nav-link {% if request.path=='/profile' %}active{% endif %}">
+      <svg class="nav-link-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+      </svg>
+      <span>My Profile</span>
+    </a>
+  </div>
+
+  <div class="nav-right">
+    <div class="nav-clock" id="topbar-clock"></div>
+    <div class="nav-user">
+      <div class="nav-avatar">{{ session.full_name[:2].upper() }}</div>
+      <span class="nav-user-name">{{ session.full_name }}</span>
+    </div>
+    <a href="/logout" class="nav-logout">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+      Sign Out
+    </a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+function updateClock(){
+  const el=document.getElementById('topbar-clock');
+  if(!el)return;
+  el.textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+updateClock();setInterval(updateClock,1000);
+
+function showToast(msg,type='info',duration=4000){
+  const icons={
+    success:'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
+    error:'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    info:'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  };
+  const t=document.createElement('div');
+  t.className=`toast toast-${type}`;
+  t.innerHTML=`${icons[type]||''}<span style="flex:1">${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(6px)';t.style.transition='.3s';setTimeout(()=>t.remove(),300);},duration);
+}
+
+function animateCount(el,target,duration=900){
+  const start=performance.now();
+  function step(now){
+    const p=Math.min((now-start)/duration,1);
+    const ease=1-Math.pow(1-p,3);
+    el.textContent=Math.round(target*ease);
+    if(p<1)requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+if(window.Chart){
+  Chart.defaults.color='#94a3b8';
+  Chart.defaults.borderColor='#e2e8f0';
+  Chart.defaults.font.family="'Inter',sans-serif";
+  Chart.defaults.font.size=11;
+}
+</script>
+
+<!-- ── Global Confirm Modal ──────────────────────────────────────────── -->
+<div id="confirm-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.5);align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--white);border-radius:14px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2);padding:28px 28px 22px;animation:fadeInUp .2s ease">
+    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
+      <div id="confirm-icon" style="width:40px;height:40px;border-radius:10px;background:#fef2f2;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="18" height="18" fill="none" stroke="#dc2626" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--tx-1);margin-bottom:5px" id="confirm-title">Confirm Action</div>
+        <div style="font-size:13px;color:var(--tx-2);line-height:1.5" id="confirm-message">Are you sure?</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeConfirm()" style="padding:9px 18px;border:1.5px solid var(--border-2);border-radius:7px;background:var(--white);font-family:var(--sans);font-size:13px;font-weight:500;color:var(--tx-2);cursor:pointer">Cancel</button>
+      <button id="confirm-ok" style="padding:9px 18px;border:none;border-radius:7px;background:#dc2626;font-family:var(--sans);font-size:13px;font-weight:600;color:#fff;cursor:pointer">Delete</button>
+    </div>
+  </div>
+</div>
+<script>
+let _confirmCallback = null;
+function showConfirm(title, message, okLabel, callback) {
+  document.getElementById('confirm-title').textContent   = title;
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('confirm-ok').textContent      = okLabel || 'Delete';
+  _confirmCallback = callback;
+  const m = document.getElementById('confirm-modal');
+  m.style.display = 'flex';
+  requestAnimationFrame(() => m.style.opacity = 1);
+}
+function closeConfirm() {
+  const m = document.getElementById('confirm-modal');
+  m.style.display = 'none';
+  _confirmCallback = null;
+}
+document.getElementById('confirm-ok').addEventListener('click', () => {
+  if (_confirmCallback) _confirmCallback();
+  closeConfirm();
+});
+document.getElementById('confirm-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeConfirm();
+});
+function confirmForm(title, message, formEl) {
+  showConfirm(title, message, 'Delete', () => formEl.submit());
+}
+</script>
+</body>
+</html>

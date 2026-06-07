@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% block title %}Users — Admin{% endblock %}
+{% block topbar_title %}User Management{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── HERO ── */
+.users-hero{
+  background:linear-gradient(135deg,var(--blue-deeper) 0%,var(--blue) 60%,var(--blue-light) 100%);
+  border-radius:var(--radius-lg);padding:24px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;box-shadow:var(--shadow-lg);position:relative;overflow:hidden;
+}
+.users-hero::before{content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
+.uh-title{font-size:20px;font-weight:700;color:var(--white);letter-spacing:-.02em;margin-bottom:3px}
+.uh-sub{font-size:12px;color:rgba(255,255,255,.6)}
+.uh-stats{display:flex;gap:14px;position:relative;z-index:1}
+.uh-stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:11px;padding:12px 20px;text-align:center;min-width:80px;backdrop-filter:blur(4px)}
+.uh-stat-num{font-size:24px;font-weight:800;color:var(--white);letter-spacing:-.03em;line-height:1}
+.uh-stat-lbl{font-size:10px;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+
+/* ── AVATARS ── */
+.u-avatar{
+  width:38px;height:38px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:var(--white);letter-spacing:.03em;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);
+}
+.u-avatar.av-admin{background:linear-gradient(135deg,var(--blue),var(--blue-light))}
+.u-avatar.av-engineer{background:linear-gradient(135deg,#475569,#64748b)}
+
+/* ── TABLE ENHANCEMENTS ── */
+.u-name{font-size:13px;font-weight:700;color:var(--g900)}
+.u-handle{font-size:11px;color:var(--g400);font-family:var(--mono);margin-top:1px}
+.u-stat-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--g500);font-family:var(--mono)}
+.u-stat-pill svg{color:var(--g300)}
+
+/* ── FILTER AREA ── */
+.filter-tab{
+  padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;
+  border:1.5px solid var(--g100);background:var(--white);color:var(--g500);
+  cursor:pointer;transition:.15s;
+}
+.filter-tab:hover{border-color:var(--blue-mid);color:var(--blue)}
+.filter-tab.active{background:var(--blue);border-color:var(--blue);color:var(--white)}
+
+/* ── LAST LOGIN indicator ── */
+.login-recent{color:var(--success);font-weight:600}
+.login-old{color:var(--g300)}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal-box{background:var(--white);border-radius:16px;width:100%;max-width:540px;box-shadow:0 24px 64px rgba(0,0,0,.2);transform:translateY(20px);transition:transform .25s;padding:32px}
+.modal-overlay.open .modal-box{transform:translateY(0)}
+.modal-header{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.modal-icon{width:38px;height:38px;border-radius:10px;background:var(--blue-pale);display:flex;align-items:center;justify-content:center;color:var(--blue);flex-shrink:0}
+.modal-title{font-size:17px;font-weight:800;color:var(--g900);letter-spacing:-.01em}
+.modal-sub{font-size:12px;color:var(--g400);margin-bottom:22px;padding-left:50px}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.modal-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.modal-field.half{margin-bottom:0}
+.modal-field label{font-size:11px;font-weight:600;color:var(--g700);letter-spacing:.03em;text-transform:uppercase}
+.modal-field input,.modal-field select{
+  border:1.5px solid var(--g100);border-radius:8px;padding:10px 12px;
+  font-family:var(--sans);font-size:13px;color:var(--g900);background:var(--g50);
+  outline:none;transition:border-color .2s,background .2s}
+.modal-field input:focus,.modal-field select:focus{border-color:var(--blue);background:var(--white);box-shadow:0 0 0 3px rgba(27,79,155,.08)}
+.modal-actions{display:flex;gap:10px;margin-top:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--g50)}
+.modal-err{display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 13px;font-size:12px;color:var(--danger);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.modal-err.show{display:flex}
+
+/* ── PW STRENGTH ── */
+.pw-rules{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px}
+.pw-rule{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--g400);transition:color .2s}
+.pw-rule.ok{color:var(--success)}
+.pw-rule svg{flex-shrink:0}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% set admin_count    = users|selectattr('role','eq','admin')   |list|length %}
+{% set engineer_count = users|selectattr('role','eq','engineer')|list|length %}
+
+<!-- Hero -->
+<div class="users-hero anim-fadeup">
+  <div style="position:relative;z-index:1">
+    <div class="uh-title">Team Members</div>
+    <div class="uh-sub">Manage platform access, roles and permissions</div>
+  </div>
+  <div class="uh-stats">
+    <div class="uh-stat">
+      <div class="uh-stat-num">{{ users|length }}</div>
+      <div class="uh-stat-lbl">Total</div>
+    </div>
+    <div class="uh-stat">
+      <div class="uh-stat-num">{{ admin_count }}</div>
+      <div class="uh-stat-lbl">Admins</div>
+    </div>
+    <div class="uh-stat">
+      <div class="uh-stat-num">{{ engineer_count }}</div>
+      <div class="uh-stat-lbl">Engineers</div>
+    </div>
+  </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="flash flash-{{ category }}" style="margin-bottom:14px">{{ message }}</div>
+  {% endfor %}
+{% endwith %}
+
+<!-- Table card -->
+<div class="card anim-fadeup">
+  <!-- Card header: filters + search + add button -->
+  <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div style="display:flex;gap:6px">
+        <button class="filter-tab active" onclick="filterUsers('all',this)">All <span id="cnt-all" style="font-size:10px;opacity:.7">({{ users|length }})</span></button>
+        <button class="filter-tab" onclick="filterUsers('admin',this)">Admins <span id="cnt-admin" style="font-size:10px;opacity:.7">({{ admin_count }})</span></button>
+        <button class="filter-tab" onclick="filterUsers('engineer',this)">Engineers <span id="cnt-eng" style="font-size:10px;opacity:.7">({{ engineer_count }})</span></button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:7px;background:var(--g50);border:1.5px solid var(--g100);border-radius:7px;padding:7px 12px;transition:border-color .2s" id="search-wrap">
+          <svg width="13" height="13" fill="none" stroke="var(--g400)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="user-search" placeholder="Search name or username…" oninput="applyFilters()"
+            style="border:none;outline:none;font-family:var(--sans);font-size:12px;color:var(--g900);background:transparent;width:200px">
+        </div>
+        <button class="btn btn-primary" onclick="openCreateModal()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add User
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Role</th>
+        <th>Assessments</th>
+        <th>Projects</th>
+        <th>Joined</th>
+        <th>Last Login</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="users-tbody">
+    {% for u in users %}
+    <tr class="user-row anim-fadeup" data-role="{{ u.role }}" data-name="{{ (u.full_name ~ ' ' ~ u.username)|lower }}">
+      <!-- User cell -->
+      <td>
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="u-avatar {{ 'av-admin' if u.role == 'admin' else 'av-engineer' }}">
+            {{ u.full_name[:2].upper() }}
+          </div>
+          <div>
+            <div class="u-name">{{ u.full_name }}</div>
+            <div class="u-handle">@{{ u.username }}</div>
+          </div>
+        </div>
+      </td>
+      <!-- Role cell -->
+      <td>
+        {% if u.role == 'admin' and u.id in admin_num %}
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="badge badge-admin" style="font-size:11px">Admin {{ admin_num[u.id] }}</span>
+        </div>
+        {% else %}
+        <span class="badge badge-engineer" style="font-size:11px">Engineer</span>
+        {% endif %}
+      </td>
+      <!-- Assessments -->
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:15px;font-weight:800;color:{% if u.run_count > 0 %}var(--blue){% else %}var(--g300){% endif %}">{{ u.run_count }}</span>
+          <span style="font-size:10px;color:var(--g400)">run{{ 's' if u.run_count != 1 else '' }}</span>
+        </div>
+      </td>
+      <!-- Projects -->
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:15px;font-weight:800;color:{% if u.project_count > 0 %}var(--g700){% else %}var(--g300){% endif %}">{{ u.project_count }}</span>
+          <span style="font-size:10px;color:var(--g400)">project{{ 's' if u.project_count != 1 else '' }}</span>
+        </div>
+      </td>
+      <!-- Joined -->
+      <td style="font-family:var(--mono);font-size:11px;color:var(--g400)">
+        {{ u.created_at[:10] if u.created_at else '—' }}
+      </td>
+      <!-- Last login -->
+      <td style="font-family:var(--mono);font-size:11px">
+        {% if u.last_login %}
+        <span class="login-recent">{{ u.last_login[:16] }}</span>
+        {% else %}
+        <span class="login-old">Never</span>
+        {% endif %}
+      </td>
+      <!-- Actions -->
+      <td>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <a href="/admin/users/{{ u.id }}" class="btn btn-outline btn-sm">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+          </a>
+          {% if u.id != session['user_id'] %}
+          <form method="POST" action="/admin/users/{{ u.id }}/toggle-role" style="margin:0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline btn-sm" title="Toggle between Admin and Engineer"
+              style="{% if u.role == 'admin' %}color:var(--g500){% else %}color:var(--blue){% endif %}">
+              {% if u.role == 'admin' %}
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+              → Engineer
+              {% else %}
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg>
+              → Admin
+              {% endif %}
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--g400)">No users found</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- No-results row (injected by JS) -->
+  <div id="no-user-results" style="display:none;text-align:center;padding:32px;color:var(--g400);font-size:13px">
+    No users match your search.
+  </div>
+</div>
+
+
+<!-- ── Create User Modal ── -->
+<div class="modal-overlay" id="create-modal" onclick="if(event.target===this)closeCreateModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div class="modal-title">Create New User</div>
+    </div>
+    <div class="modal-sub">Fill in the details. The new user can log in immediately.</div>
+
+    <div class="modal-err" id="modal-err">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <span id="modal-err-text"></span>
+    </div>
+
+    <form method="POST" action="/admin/users/create" onsubmit="return validateCreateForm()">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-grid">
+        <div class="modal-field half">
+          <label>Full Name *</label>
+          <input type="text" name="full_name" placeholder="Jane Smith" required>
+        </div>
+        <div class="modal-field half">
+          <label>Username *</label>
+          <input type="text" name="username" placeholder="j.smith" required autocomplete="off">
+        </div>
+      </div>
+      <div style="height:4px"></div>
+      <div class="modal-field">
+        <label>Role *</label>
+        <select name="role">
+          <option value="engineer">Engineer</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="modal-grid">
+        <div class="modal-field half">
+          <label>Password *</label>
+          <input type="password" name="password" id="cp-pw" placeholder="Min. 8 characters" required autocomplete="new-password" oninput="checkCreatePw()">
+        </div>
+        <div class="modal-field half">
+          <label>Confirm Password *</label>
+          <input type="password" name="confirm" id="cp-confirm" placeholder="Repeat password" required autocomplete="new-password" oninput="checkCreatePw()">
+        </div>
+      </div>
+      <!-- Password rules -->
+      <div class="pw-rules" id="pw-rules" style="display:none;margin-top:-6px;margin-bottom:12px">
+        <span class="pw-rule" id="rule-len">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          8+ chars
+        </span>
+        <span class="pw-rule" id="rule-upper">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Uppercase
+        </span>
+        <span class="pw-rule" id="rule-digit">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Number
+        </span>
+        <span class="pw-rule" id="rule-match">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Passwords match
+        </span>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeCreateModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="cp-submit">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Create User
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+let currentRoleFilter = 'all';
+
+function filterUsers(role, btn) {
+  currentRoleFilter = role;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  let visible = 0;
+  document.querySelectorAll('.user-row').forEach(row => {
+    const roleMatch = currentRoleFilter === 'all' || row.dataset.role === currentRoleFilter;
+    const nameMatch = row.dataset.name.includes(q);
+    const show = roleMatch && nameMatch;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('no-user-results').style.display = visible === 0 ? 'block' : 'none';
+}
+
+function openCreateModal() {
+  document.getElementById('create-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeCreateModal() {
+  document.getElementById('create-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function checkCreatePw() {
+  const pw  = document.getElementById('cp-pw').value;
+  const cf  = document.getElementById('cp-confirm').value;
+  const rules = document.getElementById('pw-rules');
+  rules.style.display = pw ? 'flex' : 'none';
+
+  const okLen   = pw.length >= 8;
+  const okUpper = /[A-Z]/.test(pw);
+  const okDigit = /[0-9]/.test(pw);
+  const okMatch = pw.length > 0 && pw === cf;
+
+  document.getElementById('rule-len').classList.toggle('ok', okLen);
+  document.getElementById('rule-upper').classList.toggle('ok', okUpper);
+  document.getElementById('rule-digit').classList.toggle('ok', okDigit);
+  document.getElementById('rule-match').classList.toggle('ok', okMatch);
+}
+
+function validateCreateForm() {
+  const pw  = document.getElementById('cp-pw').value;
+  const cf  = document.getElementById('cp-confirm').value;
+  const err = document.getElementById('modal-err');
+  const txt = document.getElementById('modal-err-text');
+
+  const setErr = msg => { txt.textContent = msg; err.classList.add('show'); };
+
+  if (pw.length < 8)           { setErr('Password must be at least 8 characters.'); return false; }
+  if (!/[A-Z]/.test(pw))       { setErr('Password must contain at least one uppercase letter.'); return false; }
+  if (!/[0-9]/.test(pw))       { setErr('Password must contain at least one number.'); return false; }
+  if (pw !== cf)               { setErr('Passwords do not match.'); return false; }
+  err.classList.remove('show');
+  return true;
+}
+
+// Auto-open modal on flash error
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% for category, message in messages %}
+{% if category == 'error' %}
+document.addEventListener('DOMContentLoaded', () => openCreateModal());
+{% endif %}
+{% endfor %}
+{% endwith %}
+</script>
+{% endblock %}
