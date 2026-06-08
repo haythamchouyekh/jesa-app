@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<title>JESA · {% block title %}Dashboard{% endblock %}</title>
+<title>JESA DCMA Validator · {% block title %}Dashboard{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -210,6 +210,10 @@ body{
 
 <!-- NAVBAR -->
 <nav class="navbar">
+  <a href="/dashboard" class="nav-brand" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0">
+    <img src="/static/img/jesa_logo_white.png" style="height:28px;width:auto" alt="JESA">
+    <span class="nav-brand-label" style="font-size:13px;font-weight:600;color:rgba(255,255,255,.85);letter-spacing:.01em;white-space:nowrap">JESA DCMA Validator</span>
+  </a>
   <div class="nav-links">
     <a href="/dashboard" class="nav-link {% if request.path=='/dashboard' %}active{% endif %}">
       <svg class="nav-link-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
