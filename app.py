@@ -364,7 +364,7 @@ def login():
                 return redirect(url_for('force_change_password'))
             return redirect(url_for('dashboard'))
 
-        _login_attempts[ip].append(datetime.utcnow())
+        _login_attempts[ip].append(datetime.now(timezone.utc))
         _audit('login_failed', username)
         remaining = _RATE_LIMIT - len(_login_attempts[ip])
         if remaining > 0:
